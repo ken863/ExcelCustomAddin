@@ -1,6 +1,8 @@
 ﻿namespace ExcelCustomAddin
 {
+    using Microsoft.Office.Core;
     using Microsoft.Office.Interop.Excel;
+    using Microsoft.Office.Tools;
     using System;
     using System.Linq;
     using System.Text;
@@ -11,6 +13,9 @@
     public partial class ThisAddIn
     {
         private ActionPanelControl _actionPanel { get; set; }
+
+        public Microsoft.Office.Tools.CustomTaskPane myCustomTaskPane { get; set; }
+
         ChatGPTClient chatGPTClient { get; set; }
 
         /// <summary>
@@ -19,7 +24,6 @@
         private void InternalStartup()
         {
             this.Startup += new EventHandler(ThisAddIn_Startup);
-            this.Shutdown += new EventHandler(ThisAddIn_Shutdown);
         }
 
         /// <summary>
@@ -32,26 +36,40 @@
             var apiKey = "sk-proj-KHBw6jj2cKclN3xmD5olT3BlbkFJekvhNIP9ykw0F1xIScCD";
             chatGPTClient = new ChatGPTClient(apiKey);
 
-            InitWorbBook(this.Application.ActiveWorkbook);
+            if (this.Application.ActiveWorkbook != null)
+            {
+                InitWorbBook(this.Application.ActiveWorkbook);
 
-            // Register Events
-            this.Application.ActiveWorkbook.NewSheet += new WorkbookEvents_NewSheetEventHandler(WorkBook_NewSheet);
-            this.Application.ActiveWorkbook.SheetBeforeDelete += new WorkbookEvents_SheetBeforeDeleteEventHandler(WorkBook_SheetBeforeDelete);
-            this.Application.ActiveWorkbook.SheetActivate += new WorkbookEvents_SheetActivateEventHandler(WorkBook_SheetActivate);
-            this.Application.ActiveWorkbook.SheetSelectionChange += new WorkbookEvents_SheetSelectionChangeEventHandler(WorkBook_SheetSelectionChange);
+                // Register Events
+                this.Application.ActiveWorkbook.NewSheet += new WorkbookEvents_NewSheetEventHandler(WorkBook_NewSheet);
+                this.Application.ActiveWorkbook.SheetBeforeDelete += new WorkbookEvents_SheetBeforeDeleteEventHandler(WorkBook_SheetBeforeDelete);
+                this.Application.ActiveWorkbook.SheetActivate += new WorkbookEvents_SheetActivateEventHandler(WorkBook_SheetActivate);
+                this.Application.ActiveWorkbook.SheetSelectionChange += new WorkbookEvents_SheetSelectionChangeEventHandler(WorkBook_SheetSelectionChange);
 
-            // Get Active ActionsPanel
-            _actionPanel.ListOfSheet_SelectedIndexChanged += new EventHandler(ListOfSheet_SelectedIndexChanged);
-            _actionPanel.TranslateClick += new EventHandler(TranslateClickAsync);
+                // Get Active ActionsPanel
+                _actionPanel.ListOfSheet_SelectedIndexChanged += new EventHandler(ListOfSheet_SelectedIndexChanged);
+                _actionPanel.VisibleChanged += new EventHandler(ListOfSheet_VisibleChangedd);
+                _actionPanel.TranslateClick += new EventHandler(TranslateClickAsync);
 
-            // Make list of worksheet on ActionsPane
-            CreateWorkSheetList();
+                // Make list of worksheet on ActionsPane
+                CreateWorkSheetList();
+            }
 
             // Register Hanle Events
             ((AppEvents_Event)Application).NewWorkbook += new AppEvents_NewWorkbookEventHandler(Application_NewWorkbook);
             this.Application.WorkbookOpen += new AppEvents_WorkbookOpenEventHandler(Application_WorkbookOpen);
             this.Application.WorkbookActivate += new AppEvents_WorkbookActivateEventHandler(Application_WorkbookActive);
             this.Application.WorkbookBeforeClose += new AppEvents_WorkbookBeforeCloseEventHandler(Application_WorkbookBeforeClose);
+        }
+
+        private void ListOfSheet_VisibleChangedd(object sender, EventArgs e)
+        {
+            if (_actionPanel == null)
+            {
+                return;
+            }
+
+            Globals.Ribbons.ManageTaskPaneRibbon.toggleButton1.Checked = myCustomTaskPane.Visible;
         }
 
         /// <summary>
@@ -82,7 +100,7 @@
         /// <param name="Wb"></param>
         private void Application_WorkbookBeforeClose(Workbook Wb, ref bool isCancel)
         {
-            if (isCancel)
+            if (isCancel || Wb == null)
             {
                 return;
             }
@@ -99,6 +117,11 @@
         /// <param name="Wb"></param>
         private void Application_WorkbookActive(Workbook Wb)
         {
+            if (Wb == null)
+            {
+                return;
+            }
+
             RegisterEvents(Wb);
 
             // Get Active ActionsPanel
@@ -107,10 +130,19 @@
             _actionPanel.ListOfSheet_SelectedIndexChanged += new EventHandler(ListOfSheet_SelectedIndexChanged);
             _actionPanel.TranslateClick -= new EventHandler(TranslateClickAsync);
             _actionPanel.TranslateClick += new EventHandler(TranslateClickAsync);
+            _actionPanel.VisibleChanged -= new EventHandler(ListOfSheet_VisibleChangedd);
+            _actionPanel.VisibleChanged += new EventHandler(ListOfSheet_VisibleChangedd);
+
+            myCustomTaskPane = TaskPaneManager.GetTaskPane(Wb.Name, () => new ActionPanelControl());
         }
 
         private void RegisterEvents(Workbook Wb)
         {
+            if (Wb == null)
+            {
+                return;
+            }
+
             Wb.NewSheet -= new WorkbookEvents_NewSheetEventHandler(WorkBook_NewSheet);
             Wb.SheetBeforeDelete -= new WorkbookEvents_SheetBeforeDeleteEventHandler(WorkBook_SheetBeforeDelete);
             Wb.SheetActivate -= new WorkbookEvents_SheetActivateEventHandler(WorkBook_SheetActivate);
@@ -129,6 +161,11 @@
         /// <param name="sheet"></param>
         private void WorkBook_SheetActivate(object sheet)
         {
+            if (sheet == null)
+            {
+                return;
+            }
+
             CreateWorkSheetList();
 
             Worksheet worksheet = (Excel.Worksheet)sheet;
@@ -149,6 +186,11 @@
         /// <param name="sheet"></param>
         private void WorkBook_SheetSelectionChange(object Sh, Range Target)
         {
+            if (Target == null)
+            {
+                return;
+            }
+
             GetSelectedText();
         }
 
@@ -175,6 +217,11 @@
         /// </summary>
         private void CreateWorkSheetList()
         {
+            if (_actionPanel == null || this.Application.ActiveWorkbook == null)
+            {
+                return;
+            }
+
             // Xoá toàn bộ sheet
             _actionPanel.listOfSheet.Items.Clear();
 
@@ -195,24 +242,18 @@
         }
 
         /// <summary>
-        /// ThisAddIn_Shutdown
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        private void ThisAddIn_Shutdown(object sender, EventArgs e)
-        {
-            this.Application.WorkbookOpen -= new AppEvents_WorkbookOpenEventHandler(Application_WorkbookOpen);
-            ((AppEvents_Event)Application).NewWorkbook -= new AppEvents_NewWorkbookEventHandler(Application_NewWorkbook);
-        }
-
-        /// <summary>
         /// AddActionPaneToWorkbook
         /// </summary>
         /// <param name="workbook"></param>
         private void InitWorbBook(Excel.Workbook workbook)
         {
-            Microsoft.Office.Tools.CustomTaskPane myCustomTaskPane = this.CustomTaskPanes.Add(new ActionPanelControl(), workbook.Name, workbook.Windows[1]);
-            myCustomTaskPane.Visible = true;
+            if (workbook == null)
+            {
+                return;
+            }
+
+            myCustomTaskPane = TaskPaneManager.GetTaskPane(workbook.Name, () => new ActionPanelControl());
+            myCustomTaskPane.Visible = false;
 
             // Get Active ActionsPanel
             _actionPanel = (ActionPanelControl)this.CustomTaskPanes.Where(_ => _.Title == workbook.Name).FirstOrDefault().Control;
@@ -229,6 +270,11 @@
         {
             try
             {
+                if (_actionPanel.listOfSheet.SelectedItem == null)
+                {
+                    return;
+                }
+
                 Worksheet sheet = null;
                 string sheetName = _actionPanel.listOfSheet.SelectedItem.ToString();
 
@@ -326,10 +372,6 @@
 
                     _actionPanel.txtSourceText.Text = sb.ToString().Trim();
                 }
-            }
-            else
-            {
-                MessageBox.Show("Không có ô nào được chọn.");
             }
         }
     }

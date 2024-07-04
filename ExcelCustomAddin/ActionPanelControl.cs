@@ -19,6 +19,7 @@ namespace ExcelCustomAddin
 
         public event EventHandler ListOfSheet_SelectedIndexChanged;
         public event EventHandler TranslateClick;
+        public event EventHandler VisibleChangedd;
 
         /// <summary>
         /// listOfSheet_SelectedIndexChanged
@@ -29,6 +30,12 @@ namespace ExcelCustomAddin
         {
             if (this.ListOfSheet_SelectedIndexChanged != null)
                 this.ListOfSheet_SelectedIndexChanged(this, e);
+        }
+
+        private void listOfSheet_VisibleChangedd(object sender, EventArgs e)
+        {
+            if (this.VisibleChangedd != null)
+                this.VisibleChangedd(this, e);
         }
 
         /// <summary>

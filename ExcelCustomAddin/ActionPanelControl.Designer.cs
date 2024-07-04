@@ -1,4 +1,6 @@
 ﻿
+using System;
+
 namespace ExcelCustomAddin
 {
     partial class ActionPanelControl
@@ -38,7 +40,7 @@ namespace ExcelCustomAddin
             // 
             // txtSourceText
             // 
-            this.txtSourceText.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            this.txtSourceText.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
             this.txtSourceText.BorderStyle = System.Windows.Forms.BorderStyle.None;
             this.txtSourceText.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
@@ -64,7 +66,7 @@ namespace ExcelCustomAddin
             // 
             // txtDesText
             // 
-            this.txtDesText.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            this.txtDesText.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
             this.txtDesText.BorderStyle = System.Windows.Forms.BorderStyle.None;
             this.txtDesText.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
@@ -76,8 +78,8 @@ namespace ExcelCustomAddin
             // 
             // listOfSheet
             // 
-            this.listOfSheet.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Left) 
+            this.listOfSheet.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
+            | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
             this.listOfSheet.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.listOfSheet.FormattingEnabled = true;
@@ -87,6 +89,7 @@ namespace ExcelCustomAddin
             this.listOfSheet.Size = new System.Drawing.Size(402, 394);
             this.listOfSheet.TabIndex = 3;
             this.listOfSheet.SelectedIndexChanged += new System.EventHandler(this.listOfSheet_SelectedIndexChanged);
+            this.listOfSheet.VisibleChanged += new System.EventHandler(this.listOfSheet_VisibleChangedd);
             // 
             // label1
             // 
@@ -112,7 +115,6 @@ namespace ExcelCustomAddin
             this.Size = new System.Drawing.Size(402, 823);
             this.ResumeLayout(false);
             this.PerformLayout();
-
         }
 
         #endregion
