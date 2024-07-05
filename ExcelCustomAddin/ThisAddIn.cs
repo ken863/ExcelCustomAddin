@@ -3,9 +3,9 @@
     using Microsoft.Office.Interop.Excel;
     using Microsoft.Office.Tools;
     using System;
+    using System.ComponentModel;
     using System.Linq;
     using System.Text;
-    using System.Windows.Forms;
     using Excel = Microsoft.Office.Interop.Excel;
 
     public partial class ThisAddIn
@@ -28,6 +28,8 @@
         /// chatGPTClient
         /// </summary>
         ChatGPTClient chatGPTClient { get; set; }
+
+        BackgroundWorker backgroundWorker = new BackgroundWorker();
 
         /// <summary>
         /// InternalStartup
@@ -99,22 +101,6 @@
             this.GetSelectedText();
         }
 
-        /// <summary>
-        /// ActionsPane_ClickTranslate
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        private void ActionsPane_ClickTranslate(object sender, EventArgs e)
-        {
-            try
-            {
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show(ex.Message);
-            }
-        }
-
         public void GetSelectedText()
         {
             // Giả sử rằng 'application' là biến đại diện cho đối tượng ứng dụng Excel hiện tại (Application)
@@ -125,32 +111,69 @@
             // Kiểm tra xem có bất kỳ range nào đang được chọn không
             if (application.Selection != null)
             {
-                // Lấy ra đối tượng Selection
+                BackgroundWorker backgroundWorker = new BackgroundWorker();
+
+                // Đăng ký sự kiện DoWork và RunWorkerCompleted
+                backgroundWorker.DoWork += new DoWorkEventHandler(BackgroundWorker_DoWork);
+
                 Range selectedRange = application.Selection as Range;
 
-                if (selectedRange != null)
+                // Bắt đầu BackgroundWorker
+                backgroundWorker.RunWorkerAsync(selectedRange);
+            }
+        }
+
+        private void BackgroundWorker_DoWork(object sender, DoWorkEventArgs e)
+        {
+            try
+            {
+                var selectedRange = (Range)e.Argument;
+
+                // Kiểm tra xem toàn bộ hàng đang được chọn
+                if (selectedRange.Rows.Count > 1 && selectedRange.Rows.Count == this.Application.Rows.Count)
                 {
-                    // Lặp qua từng hàng trong vùng
-                    foreach (Range row in selectedRange.Rows)
-                    {
-                        string rowData = "";
-                        // Lấy số lượng cột trong hàng
-                        int columnCount = row.Columns.Count;
-
-                        for (int i = 1; i <= columnCount; i++)
-                        {
-                            // Lấy giá trị của mỗi ô
-                            Range cell = row.Cells[1, i];
-                            string cellValue = cell.Value?.ToString() ?? "";
-
-                            rowData += cellValue.Trim() + "\t";
-                        }
-
-                        sb.AppendLine(rowData);
-                    }
-
-                    _actionPanel.txtSourceText.Text = sb.ToString().Trim();
+                    // Một hàng đang được chọn
+                    return;
                 }
+
+                // Kiểm tra xem toàn bộ hàng đang được chọn
+                if (selectedRange.Columns.Count > 1 && selectedRange.Columns.Count == this.Application.Columns.Count)
+                {
+                    // Một hàng đang được chọn
+                    return;
+                }
+
+                var rangeValues = selectedRange.Cells.Cast<Range>().Select(cell => cell.Value2?.ToString().Trim())
+                             .Where(value => !string.IsNullOrEmpty(value));
+
+                string result = string.Join("\n", rangeValues);
+
+                if (!string.IsNullOrEmpty(result))
+                {
+                    this.UpdateText(result.Trim());
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// UpdateText
+        /// </summary>
+        /// <param name="text"></param>
+        private void UpdateText(string text)
+        {
+            if (_actionPanel.txtSourceText.InvokeRequired)
+            {
+                // Nếu cần phải gọi Invoke, sử dụng phương thức này để gọi hàm từ thread khác
+                _actionPanel.txtSourceText.Invoke(new Action<string>(UpdateText), text);
+            }
+            else
+            {
+                // Nếu không cần phải gọi Invoke, cập nhật trực tiếp
+                _actionPanel.txtSourceText.Text = text;
             }
         }
     }
