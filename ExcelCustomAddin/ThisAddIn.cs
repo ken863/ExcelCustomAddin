@@ -98,7 +98,10 @@
         /// <param name="target"></param>
         private void Application_SheetSelectionChange(object sh, Range target)
         {
-            this.GetSelectedText();
+            if (myCustomTaskPane.Visible)
+            {
+                this.GetSelectedText();
+            }
         }
 
         public void GetSelectedText()

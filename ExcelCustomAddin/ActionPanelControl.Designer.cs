@@ -90,8 +90,8 @@ namespace ExcelCustomAddin
             // 
             // bgwTranslate
             // 
+            this.bgwTranslate.WorkerReportsProgress = true;
             this.bgwTranslate.DoWork += new System.ComponentModel.DoWorkEventHandler(this.bgwTranslate_DoWork);
-            this.bgwTranslate.RunWorkerCompleted += new System.ComponentModel.RunWorkerCompletedEventHandler(this.bgwTranslate_RunWorkerCompleted);
             // 
             // ActionPanelControl
             // 

@@ -24,10 +24,21 @@ namespace ExcelCustomAddin
 
         private void ButtonTranslate_Click(object sender, EventArgs e)
         {
-            bgwTranslate.RunWorkerAsync(txtSourceText.Text.Trim());
+            if (string.IsNullOrEmpty(txtSourceText.Text.Trim()))
+            {
+                return;
+            }
+
             this.UpdateProgressBar(true);
+            this.UpdateButton(false);
+            bgwTranslate.RunWorkerAsync(txtSourceText.Text.Trim());
         }
 
+        /// <summary>
+        /// bgwTranslate_DoWork
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private async void bgwTranslate_DoWork(object sender, DoWorkEventArgs e)
         {
             try
@@ -46,11 +57,11 @@ namespace ExcelCustomAddin
             {
                 MessageBox.Show(ex.Message);
             }
-        }
-
-        private void bgwTranslate_RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)
-        {
-            this.UpdateProgressBar(false);
+            finally
+            {
+                this.UpdateProgressBar(false);
+                this.UpdateButton(true);
+            }
         }
 
         /// <summary>
@@ -86,6 +97,24 @@ namespace ExcelCustomAddin
             {
                 // Nếu không cần phải gọi Invoke, cập nhật trực tiếp
                 progressBar.Visible = isVisible;
+            }
+        }
+
+        /// <summary>
+        /// UpdateButton
+        /// </summary>
+        /// <param name="isVisible"></param>
+        private void UpdateButton(bool isEnable)
+        {
+            if (progressBar.InvokeRequired)
+            {
+                // Nếu cần phải gọi Invoke, sử dụng phương thức này để gọi hàm từ thread khác
+                buttonTranslate.Invoke(new Action<bool>(UpdateButton), isEnable);
+            }
+            else
+            {
+                // Nếu không cần phải gọi Invoke, cập nhật trực tiếp
+                buttonTranslate.Enabled = isEnable;
             }
         }
     }
