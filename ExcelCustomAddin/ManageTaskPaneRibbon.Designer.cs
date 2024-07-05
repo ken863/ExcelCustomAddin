@@ -36,7 +36,7 @@
         {
             this.tab1 = this.Factory.CreateRibbonTab();
             this.group1 = this.Factory.CreateRibbonGroup();
-            this.toggleButton1 = this.Factory.CreateRibbonToggleButton();
+            this.btnTranslate = this.Factory.CreateRibbonButton();
             this.tab1.SuspendLayout();
             this.group1.SuspendLayout();
             this.SuspendLayout();
@@ -45,23 +45,23 @@
             // 
             this.tab1.ControlId.ControlIdType = Microsoft.Office.Tools.Ribbon.RibbonControlIdType.Office;
             this.tab1.Groups.Add(this.group1);
-            this.tab1.Label = "TabAddIns";
+            this.tab1.Label = "ANYCUBE TOOLS";
             this.tab1.Name = "tab1";
             // 
             // group1
             // 
-            this.group1.Items.Add(this.toggleButton1);
-            this.group1.Label = "Task Pane Manager";
+            this.group1.Items.Add(this.btnTranslate);
+            this.group1.Label = "Tools";
             this.group1.Name = "group1";
             // 
-            // toggleButton1
+            // btnTranslate
             // 
-            this.toggleButton1.ControlSize = Microsoft.Office.Core.RibbonControlSize.RibbonControlSizeLarge;
-            this.toggleButton1.Image = global::ExcelCustomAddin.Properties.Resources.Marcus_Roberto_Google_Play_Google_Translate_512;
-            this.toggleButton1.Label = "Show Task Pane";
-            this.toggleButton1.Name = "toggleButton1";
-            this.toggleButton1.ShowImage = true;
-            this.toggleButton1.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.toggleButton1_Click);
+            this.btnTranslate.ControlSize = Microsoft.Office.Core.RibbonControlSize.RibbonControlSizeLarge;
+            this.btnTranslate.Image = global::ExcelCustomAddin.Properties.Resources.Marcus_Roberto_Google_Play_Google_Translate_512;
+            this.btnTranslate.Label = "Translate";
+            this.btnTranslate.Name = "btnTranslate";
+            this.btnTranslate.ShowImage = true;
+            this.btnTranslate.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.btnTranslate_Click);
             // 
             // ManageTaskPaneRibbon
             // 
@@ -80,7 +80,7 @@
 
         internal Microsoft.Office.Tools.Ribbon.RibbonTab tab1;
         internal Microsoft.Office.Tools.Ribbon.RibbonGroup group1;
-        internal Microsoft.Office.Tools.Ribbon.RibbonToggleButton toggleButton1;
+        internal Microsoft.Office.Tools.Ribbon.RibbonButton btnTranslate;
     }
 
     partial class ThisRibbonCollection

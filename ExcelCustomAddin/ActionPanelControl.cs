@@ -12,41 +12,81 @@ namespace ExcelCustomAddin
 {
     public partial class ActionPanelControl : UserControl
     {
+
         public ActionPanelControl()
         {
             InitializeComponent();
         }
 
-        public event EventHandler ListOfSheet_SelectedIndexChanged;
-        public event EventHandler TranslateClick;
-        public event EventHandler VisibleChangedd;
+        public event EventHandler TranslateClickEvent;
+        public event EventHandler TranslateDoEvent;
+        public event EventHandler TranslateCompletedEvent;
 
-        /// <summary>
-        /// listOfSheet_SelectedIndexChanged
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        private void listOfSheet_SelectedIndexChanged(object sender, EventArgs e)
+        private void ButtonTranslate_Click(object sender, EventArgs e)
         {
-            if (this.ListOfSheet_SelectedIndexChanged != null)
-                this.ListOfSheet_SelectedIndexChanged(this, e);
+            bgwTranslate.RunWorkerAsync(txtSourceText.Text.Trim());
+            this.UpdateProgressBar(true);
         }
 
-        private void listOfSheet_VisibleChangedd(object sender, EventArgs e)
+        private async void bgwTranslate_DoWork(object sender, DoWorkEventArgs e)
         {
-            if (this.VisibleChangedd != null)
-                this.VisibleChangedd(this, e);
+            try
+            {
+                var apiKey = "sk-proj-KHBw6jj2cKclN3xmD5olT3BlbkFJekvhNIP9ykw0F1xIScCD";
+                var chatGPTClient = new ChatGPTClient(apiKey);
+
+                var text = e.Argument.ToString();
+                if (!string.IsNullOrEmpty(text))
+                {
+                    var response = await chatGPTClient.CallChatGPTAsync(text);
+                    this.UpdateText(response);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message);
+            }
+        }
+
+        private void bgwTranslate_RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)
+        {
+            this.UpdateProgressBar(false);
         }
 
         /// <summary>
-        /// btnTranslate_Click
+        /// UpdateText
         /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        private void btnTranslate_Click(object sender, EventArgs e)
+        /// <param name="text"></param>
+        private void UpdateText(string text)
         {
-            if (this.TranslateClick != null)
-                this.TranslateClick(this, e);
+            if (txtDesText.InvokeRequired)
+            {
+                // Nếu cần phải gọi Invoke, sử dụng phương thức này để gọi hàm từ thread khác
+                txtDesText.Invoke(new Action<string>(UpdateText), text);
+            }
+            else
+            {
+                // Nếu không cần phải gọi Invoke, cập nhật trực tiếp
+                txtDesText.Text = text;
+            }
+        }
+
+        /// <summary>
+        /// UpdateProgressBar
+        /// </summary>
+        /// <param name="isVisible"></param>
+        private void UpdateProgressBar(bool isVisible)
+        {
+            if (progressBar.InvokeRequired)
+            {
+                // Nếu cần phải gọi Invoke, sử dụng phương thức này để gọi hàm từ thread khác
+                progressBar.Invoke(new Action<bool>(UpdateProgressBar), isVisible);
+            }
+            else
+            {
+                // Nếu không cần phải gọi Invoke, cập nhật trực tiếp
+                progressBar.Visible = isVisible;
+            }
         }
     }
 }

@@ -32,10 +32,10 @@ namespace ExcelCustomAddin
         private void InitializeComponent()
         {
             this.txtSourceText = new System.Windows.Forms.RichTextBox();
-            this.btnTranslate = new System.Windows.Forms.Button();
+            this.buttonTranslate = new System.Windows.Forms.Button();
             this.txtDesText = new System.Windows.Forms.RichTextBox();
-            this.listOfSheet = new System.Windows.Forms.ListBox();
-            this.label1 = new System.Windows.Forms.Label();
+            this.progressBar = new System.Windows.Forms.ProgressBar();
+            this.bgwTranslate = new System.ComponentModel.BackgroundWorker();
             this.SuspendLayout();
             // 
             // txtSourceText
@@ -43,85 +43,74 @@ namespace ExcelCustomAddin
             this.txtSourceText.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
             this.txtSourceText.BorderStyle = System.Windows.Forms.BorderStyle.None;
-            this.txtSourceText.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.txtSourceText.Font = new System.Drawing.Font("Meiryo UI", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.txtSourceText.Location = new System.Drawing.Point(0, 0);
             this.txtSourceText.Name = "txtSourceText";
-            this.txtSourceText.Size = new System.Drawing.Size(402, 159);
-            this.txtSourceText.TabIndex = 0;
+            this.txtSourceText.Size = new System.Drawing.Size(402, 285);
+            this.txtSourceText.TabIndex = 4;
             this.txtSourceText.Text = "";
             // 
-            // btnTranslate
+            // buttonTranslate
             // 
-            this.btnTranslate.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.btnTranslate.BackColor = System.Drawing.SystemColors.ActiveCaptionText;
-            this.btnTranslate.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.btnTranslate.ForeColor = System.Drawing.SystemColors.ButtonHighlight;
-            this.btnTranslate.Location = new System.Drawing.Point(240, 165);
-            this.btnTranslate.Name = "btnTranslate";
-            this.btnTranslate.Size = new System.Drawing.Size(162, 28);
-            this.btnTranslate.TabIndex = 1;
-            this.btnTranslate.Text = "TRANSLATE";
-            this.btnTranslate.UseVisualStyleBackColor = false;
-            this.btnTranslate.Click += new System.EventHandler(this.btnTranslate_Click);
+            this.buttonTranslate.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.buttonTranslate.ForeColor = System.Drawing.Color.Black;
+            this.buttonTranslate.Location = new System.Drawing.Point(0, 291);
+            this.buttonTranslate.Name = "buttonTranslate";
+            this.buttonTranslate.Size = new System.Drawing.Size(402, 34);
+            this.buttonTranslate.TabIndex = 7;
+            this.buttonTranslate.Text = "TRANSLATE";
+            this.buttonTranslate.UseVisualStyleBackColor = true;
+            this.buttonTranslate.Click += new System.EventHandler(this.ButtonTranslate_Click);
             // 
             // txtDesText
             // 
-            this.txtDesText.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.txtDesText.BorderStyle = System.Windows.Forms.BorderStyle.None;
-            this.txtDesText.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.txtDesText.Location = new System.Drawing.Point(0, 199);
-            this.txtDesText.Name = "txtDesText";
-            this.txtDesText.Size = new System.Drawing.Size(402, 166);
-            this.txtDesText.TabIndex = 2;
-            this.txtDesText.Text = "";
-            // 
-            // listOfSheet
-            // 
-            this.listOfSheet.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
+            this.txtDesText.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
             | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.listOfSheet.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.listOfSheet.FormattingEnabled = true;
-            this.listOfSheet.ItemHeight = 15;
-            this.listOfSheet.Location = new System.Drawing.Point(0, 410);
-            this.listOfSheet.Name = "listOfSheet";
-            this.listOfSheet.Size = new System.Drawing.Size(402, 394);
-            this.listOfSheet.TabIndex = 3;
-            this.listOfSheet.SelectedIndexChanged += new System.EventHandler(this.listOfSheet_SelectedIndexChanged);
-            this.listOfSheet.VisibleChanged += new System.EventHandler(this.listOfSheet_VisibleChangedd);
+            this.txtDesText.BorderStyle = System.Windows.Forms.BorderStyle.None;
+            this.txtDesText.Font = new System.Drawing.Font("Meiryo UI", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.txtDesText.Location = new System.Drawing.Point(0, 331);
+            this.txtDesText.Name = "txtDesText";
+            this.txtDesText.ReadOnly = true;
+            this.txtDesText.Size = new System.Drawing.Size(402, 476);
+            this.txtDesText.TabIndex = 8;
+            this.txtDesText.Text = "";
             // 
-            // label1
+            // progressBar
             // 
-            this.label1.AutoSize = true;
-            this.label1.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label1.Location = new System.Drawing.Point(0, 386);
-            this.label1.Margin = new System.Windows.Forms.Padding(0);
-            this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(93, 15);
-            this.label1.TabIndex = 4;
-            this.label1.Text = "Danh sách sheet";
+            this.progressBar.Dock = System.Windows.Forms.DockStyle.Bottom;
+            this.progressBar.Location = new System.Drawing.Point(0, 813);
+            this.progressBar.Name = "progressBar";
+            this.progressBar.Size = new System.Drawing.Size(402, 10);
+            this.progressBar.Style = System.Windows.Forms.ProgressBarStyle.Marquee;
+            this.progressBar.TabIndex = 9;
+            this.progressBar.Visible = false;
+            // 
+            // bgwTranslate
+            // 
+            this.bgwTranslate.DoWork += new System.ComponentModel.DoWorkEventHandler(this.bgwTranslate_DoWork);
+            this.bgwTranslate.RunWorkerCompleted += new System.ComponentModel.RunWorkerCompletedEventHandler(this.bgwTranslate_RunWorkerCompleted);
             // 
             // ActionPanelControl
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.Controls.Add(this.label1);
-            this.Controls.Add(this.listOfSheet);
+            this.Controls.Add(this.progressBar);
             this.Controls.Add(this.txtDesText);
-            this.Controls.Add(this.btnTranslate);
+            this.Controls.Add(this.buttonTranslate);
             this.Controls.Add(this.txtSourceText);
             this.Name = "ActionPanelControl";
             this.Size = new System.Drawing.Size(402, 823);
             this.ResumeLayout(false);
-            this.PerformLayout();
+
         }
 
         #endregion
-        private System.Windows.Forms.Button btnTranslate;
-        private System.Windows.Forms.Label label1;
-        public System.Windows.Forms.ListBox listOfSheet;
         public System.Windows.Forms.RichTextBox txtSourceText;
+        private System.Windows.Forms.Button buttonTranslate;
         public System.Windows.Forms.RichTextBox txtDesText;
+        public System.Windows.Forms.ProgressBar progressBar;
+        public System.ComponentModel.BackgroundWorker bgwTranslate;
     }
 }
