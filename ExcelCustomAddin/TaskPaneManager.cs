@@ -17,12 +17,12 @@ namespace ExcelCustomAddin
         /// </summary>
         /// <param name="taskPaneId">Some string to identify the taskpane</param>
         /// <param name="taskPaneCreatorFunc">The function that will construct the taskpane if one does not already exist in the current Excel window.</param>
-        public static CustomTaskPane GetTaskPane(string taskPaneId, Func<UserControl> taskPaneCreatorFunc)
+        public static CustomTaskPane GetTaskPane(string taskPaneId, string title, Func<UserControl> taskPaneCreatorFunc)
         {
             string key = string.Format("{0}({1})", taskPaneId, Globals.ThisAddIn.Application.Hwnd);
             if (!_createdPanes.ContainsKey(key))
             {
-                var pane = Globals.ThisAddIn.CustomTaskPanes.Add(taskPaneCreatorFunc(), taskPaneId);
+                var pane = Globals.ThisAddIn.CustomTaskPanes.Add(taskPaneCreatorFunc(), title);
                 _createdPanes[key] = pane;
             }
             return _createdPanes[key];

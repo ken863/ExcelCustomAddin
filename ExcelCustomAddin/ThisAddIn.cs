@@ -58,16 +58,7 @@
         /// <param name="Wb"></param>
         void Application_NewWorkbook(Workbook Wb)
         {
-            if (Wb != null)
-            {
-                // Get Active ActionsPanel
-                myCustomTaskPane = TaskPaneManager.GetTaskPane(Wb.Name, () => new ActionPanelControl());
-            }
-        }
-
-        private void Application_SheetSelectionChange(object sh, Range target)
-        {
-            this.GetSelectedText();
+            this.CreateActionsPane(Wb);
         }
 
         /// <summary>
@@ -76,11 +67,7 @@
         /// <param name="Wb"></param>
         private void Application_WorkbookOpen(Workbook Wb)
         {
-            if (Wb != null)
-            {
-                // Get Active ActionsPanel
-                myCustomTaskPane = TaskPaneManager.GetTaskPane(Wb.Name, () => new ActionPanelControl());
-            }
+            this.CreateActionsPane(Wb);
         }
 
         /// <summary>
@@ -89,11 +76,26 @@
         /// <param name="Wb"></param>
         private void Application_WorkbookActive(Workbook Wb)
         {
+            this.CreateActionsPane(Wb);
+        }
+
+        private void CreateActionsPane(Workbook Wb)
+        {
             if (Wb != null)
             {
                 // Get Active ActionsPanel
-                myCustomTaskPane = TaskPaneManager.GetTaskPane(Wb.Name, () => new ActionPanelControl());
+                myCustomTaskPane = TaskPaneManager.GetTaskPane(Wb.Name, "TRANSLATE TOOL", () => new ActionPanelControl());
             }
+        }
+
+        /// <summary>
+        /// Application_SheetSelectionChange
+        /// </summary>
+        /// <param name="sh"></param>
+        /// <param name="target"></param>
+        private void Application_SheetSelectionChange(object sh, Range target)
+        {
+            this.GetSelectedText();
         }
 
         /// <summary>

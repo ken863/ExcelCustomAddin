@@ -54,6 +54,7 @@ namespace ExcelCustomAddin
             // 
             this.buttonTranslate.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
+            this.buttonTranslate.Font = new System.Drawing.Font("Meiryo UI", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.buttonTranslate.ForeColor = System.Drawing.Color.Black;
             this.buttonTranslate.Location = new System.Drawing.Point(0, 291);
             this.buttonTranslate.Name = "buttonTranslate";
