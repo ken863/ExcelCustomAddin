@@ -44,12 +44,13 @@
         /// <param name="e"></param>
         private void ThisAddIn_Startup(object sender, System.EventArgs e)
         {
-
             // Register Hanle Events
             ((AppEvents_Event)Globals.ThisAddIn.Application).NewWorkbook += Application_NewWorkbook;
             Globals.ThisAddIn.Application.WorkbookOpen += Application_WorkbookOpen;
             Globals.ThisAddIn.Application.WorkbookActivate += Application_WorkbookActive;
             Globals.ThisAddIn.Application.SheetSelectionChange += Application_SheetSelectionChange;
+
+            this.CreateActionsPane(this.Application.ActiveWorkbook);
         }
 
         /// <summary>

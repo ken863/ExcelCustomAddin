@@ -1,4 +1,6 @@
 ﻿using Microsoft.Office.Tools.Ribbon;
+using System;
+
 namespace ExcelCustomAddin
 {
     public partial class ManageTaskPaneRibbon
@@ -10,7 +12,14 @@ namespace ExcelCustomAddin
         /// <param name="e"></param>
         private void btnTranslate_Click(object sender, RibbonControlEventArgs e)
         {
-            Globals.ThisAddIn.myCustomTaskPane.Visible = !Globals.ThisAddIn.myCustomTaskPane.Visible;
+            try
+            {
+                Globals.ThisAddIn.myCustomTaskPane.Visible = !Globals.ThisAddIn.myCustomTaskPane.Visible;
+            }
+            catch(Exception ex)
+            {
+
+            }
         }
     }
 }
