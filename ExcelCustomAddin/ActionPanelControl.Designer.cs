@@ -36,6 +36,7 @@ namespace ExcelCustomAddin
             this.txtDesText = new System.Windows.Forms.RichTextBox();
             this.progressBar = new System.Windows.Forms.ProgressBar();
             this.bgwTranslate = new System.ComponentModel.BackgroundWorker();
+            this.listofSheet = new System.Windows.Forms.ListBox();
             this.SuspendLayout();
             // 
             // txtSourceText
@@ -74,7 +75,7 @@ namespace ExcelCustomAddin
             this.txtDesText.Location = new System.Drawing.Point(0, 331);
             this.txtDesText.Name = "txtDesText";
             this.txtDesText.ReadOnly = true;
-            this.txtDesText.Size = new System.Drawing.Size(402, 476);
+            this.txtDesText.Size = new System.Drawing.Size(402, 277);
             this.txtDesText.TabIndex = 8;
             this.txtDesText.Text = "";
             // 
@@ -93,10 +94,24 @@ namespace ExcelCustomAddin
             this.bgwTranslate.WorkerReportsProgress = true;
             this.bgwTranslate.DoWork += new System.ComponentModel.DoWorkEventHandler(this.bgwTranslate_DoWork);
             // 
+            // listofSheet
+            // 
+            this.listofSheet.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.listofSheet.Font = new System.Drawing.Font("Meiryo UI", 9.75F);
+            this.listofSheet.FormattingEnabled = true;
+            this.listofSheet.ItemHeight = 17;
+            this.listofSheet.Location = new System.Drawing.Point(0, 614);
+            this.listofSheet.Name = "listofSheet";
+            this.listofSheet.Size = new System.Drawing.Size(402, 191);
+            this.listofSheet.TabIndex = 10;
+            this.listofSheet.SelectedIndexChanged += new System.EventHandler(this.listofSheet_SelectedIndexChanged);
+            // 
             // ActionPanelControl
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+            this.Controls.Add(this.listofSheet);
             this.Controls.Add(this.progressBar);
             this.Controls.Add(this.txtDesText);
             this.Controls.Add(this.buttonTranslate);
@@ -113,5 +128,6 @@ namespace ExcelCustomAddin
         public System.Windows.Forms.RichTextBox txtDesText;
         public System.Windows.Forms.ProgressBar progressBar;
         public System.ComponentModel.BackgroundWorker bgwTranslate;
+        public System.Windows.Forms.ListBox listofSheet;
     }
 }

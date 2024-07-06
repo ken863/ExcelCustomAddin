@@ -1,11 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace ExcelCustomAddin
@@ -116,6 +110,11 @@ namespace ExcelCustomAddin
                 // Nếu không cần phải gọi Invoke, cập nhật trực tiếp
                 buttonTranslate.Enabled = isEnable;
             }
+        }
+
+        private void listofSheet_SelectedIndexChanged(object sender, EventArgs e)
+        {
+
         }
     }
 }

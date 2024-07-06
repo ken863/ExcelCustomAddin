@@ -3,21 +3,14 @@
     using Microsoft.Office.Interop.Excel;
     using Microsoft.Office.Tools;
     using System;
+    using System.Collections.Generic;
     using System.ComponentModel;
     using System.Linq;
     using System.Text;
-    using Excel = Microsoft.Office.Interop.Excel;
 
     public partial class ThisAddIn
     {
-        private ActionPanelControl _actionPanel
-        {
-            get
-            {
-                var currentActionPane = (ActionPanelControl)myCustomTaskPane?.Control;
-                return currentActionPane;
-            }
-        }
+        private ActionPanelControl _actionPanel { get; set; }
 
         /// <summary>
         /// myCustomTaskPane
@@ -39,6 +32,8 @@
             this.Startup += new EventHandler(ThisAddIn_Startup);
         }
 
+        private bool IsSheetActivating { get; set; } = false;
+
         /// <summary>
         /// ThisAddIn_Startup
         /// </summary>
@@ -51,8 +46,28 @@
             Globals.ThisAddIn.Application.WorkbookOpen += Application_WorkbookOpen;
             Globals.ThisAddIn.Application.WorkbookActivate += Application_WorkbookActive;
             Globals.ThisAddIn.Application.SheetSelectionChange += Application_SheetSelectionChange;
+            Globals.ThisAddIn.Application.SheetActivate += Application_SheetActivate;
 
             this.CreateActionsPane(this.Application.ActiveWorkbook);
+        }
+
+        private void Application_SheetActivate(object Sh)
+        {
+            this.IsSheetActivating = true;
+            _actionPanel.listofSheet.DataSource = this.GetListOfSheet();
+            _actionPanel.listofSheet.SelectedIndex = FindIndexOfSelectedSheet();
+            this.IsSheetActivating = false;
+
+        }
+
+        private List<string> GetListOfSheet()
+        {
+            return (from Worksheet sheet in Globals.ThisAddIn.Application.ActiveWorkbook.Sheets select sheet.Name).ToList();
+        }
+
+        private int FindIndexOfSelectedSheet()
+        {
+            return _actionPanel.listofSheet.Items.Cast<string>().ToList().FindIndex(item => item == Globals.ThisAddIn.Application.ActiveWorkbook.ActiveSheet.Name);
         }
 
         /// <summary>
@@ -88,6 +103,38 @@
             {
                 // Get Active ActionsPanel
                 myCustomTaskPane = TaskPaneManager.GetTaskPane(Wb.Name, "TRANSLATE TOOL", () => new ActionPanelControl());
+                _actionPanel = (ActionPanelControl)myCustomTaskPane?.Control;
+                _actionPanel.listofSheet.DataSource = this.GetListOfSheet();
+                _actionPanel.listofSheet.SelectedIndexChanged -= this.ListOfSheet_SelectionChanged;
+                _actionPanel.listofSheet.SelectedIndexChanged += this.ListOfSheet_SelectionChanged;
+            }
+        }
+
+        private void ListOfSheet_SelectionChanged(object sender, EventArgs e)
+        {
+            if (this.IsSheetActivating)
+            {
+                return;
+            }
+
+            this.SetActiveSheet();
+        }
+
+        private void SetActiveSheet()
+        {
+            var selectedSheetName = _actionPanel.listofSheet.SelectedValue?.ToString();
+            if (!string.IsNullOrEmpty(selectedSheetName))
+            {
+                // Sử dụng LINQ để tìm worksheet theo tên
+                Worksheet sheet = Globals.ThisAddIn.Application.ActiveWorkbook.Sheets
+                    .Cast<Worksheet>()
+                    .FirstOrDefault(ws => ws.Name == selectedSheetName);
+
+                if (sheet != null)
+                {
+                    // Đặt worksheet này là active sheet
+                    sheet.Activate();
+                }
             }
         }
 
@@ -106,20 +153,17 @@
 
         public void GetSelectedText()
         {
-            // Giả sử rằng 'application' là biến đại diện cho đối tượng ứng dụng Excel hiện tại (Application)
-            Excel.Application application = Globals.ThisAddIn.Application;
-
             StringBuilder sb = new StringBuilder();
 
+            var selectedRange = Globals.ThisAddIn.Application.Selection;
+
             // Kiểm tra xem có bất kỳ range nào đang được chọn không
-            if (application.Selection != null)
+            if (selectedRange != null)
             {
                 BackgroundWorker backgroundWorker = new BackgroundWorker();
 
                 // Đăng ký sự kiện DoWork và RunWorkerCompleted
                 backgroundWorker.DoWork += new DoWorkEventHandler(BackgroundWorker_DoWork);
-
-                Range selectedRange = application.Selection as Range;
 
                 // Bắt đầu BackgroundWorker
                 backgroundWorker.RunWorkerAsync(selectedRange);
