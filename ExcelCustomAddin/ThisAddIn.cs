@@ -107,6 +107,7 @@
                 _actionPanel.listofSheet.DataSource = this.GetListOfSheet();
                 _actionPanel.listofSheet.SelectedIndexChanged -= this.ListOfSheet_SelectionChanged;
                 _actionPanel.listofSheet.SelectedIndexChanged += this.ListOfSheet_SelectionChanged;
+                _actionPanel.TranslateSheetEvent += this.TranslateSheetAsync;
             }
         }
 
@@ -118,6 +119,31 @@
             }
 
             this.SetActiveSheet();
+        }
+
+        private async void TranslateSheetAsync(object sender, EventArgs e)
+        {
+            var sheetValue = this.GetSheetValues();
+
+            if (sheetValue != null)
+            {
+                var apiKey = "sk-proj-KHBw6jj2cKclN3xmD5olT3BlbkFJekvhNIP9ykw0F1xIScCD";
+                var chatGPTClient = new ChatGPTClient(apiKey);
+                var response = await chatGPTClient.CallChatGPTAsync(sheetValue);
+
+                foreach (string line in response.Split('\n'))
+                {
+                    var arr = line.Split('|');
+                    if (arr.Length > 1)
+                    {
+                        var cellAddress = arr[0];
+                        var cellValue = arr[1];
+
+                        Range range = Application.ActiveSheet.Range[cellAddress];
+                        range.Value2 = cellValue;
+                    }
+                }
+            }
         }
 
         private void SetActiveSheet()
@@ -222,6 +248,23 @@
                 // Nếu không cần phải gọi Invoke, cập nhật trực tiếp
                 _actionPanel.txtSourceText.Text = text;
             }
+        }
+
+        private string GetSheetValues()
+        {
+            Worksheet worksheet = (Worksheet)Globals.ThisAddIn.Application.ActiveSheet;
+
+            // Lấy toàn bộ các ô trong worksheet
+            Range usedRange = worksheet.UsedRange.Cells;
+
+            // Dùng LINQ để lấy địa chỉ của các ô có giá trị
+            var nonEmptyCellAddresses = (from Range cell in usedRange
+                                         where cell.Value2 != null
+                                         select cell.Address[false, false] + "| " + cell.Value2?.ToString().Trim()).ToList();
+
+            var result = string.Join("\n", nonEmptyCellAddresses);
+
+            return result;
         }
     }
 }

@@ -11,10 +11,7 @@ namespace ExcelCustomAddin
         {
             InitializeComponent();
         }
-
-        public event EventHandler TranslateClickEvent;
-        public event EventHandler TranslateDoEvent;
-        public event EventHandler TranslateCompletedEvent;
+        public event EventHandler TranslateSheetEvent;
 
         private void ButtonTranslate_Click(object sender, EventArgs e)
         {
@@ -112,9 +109,15 @@ namespace ExcelCustomAddin
             }
         }
 
-        private void listofSheet_SelectedIndexChanged(object sender, EventArgs e)
+        /// <summary>
+        /// btnSheetTranslate_Click
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void btnSheetTranslate_Click(object sender, EventArgs e)
         {
-
+            if (this.TranslateSheetEvent != null)
+                this.TranslateSheetEvent(this, e);
         }
     }
 }

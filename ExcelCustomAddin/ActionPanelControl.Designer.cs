@@ -1,7 +1,4 @@
-﻿
-using System;
-
-namespace ExcelCustomAddin
+﻿namespace ExcelCustomAddin
 {
     partial class ActionPanelControl
     {
@@ -37,11 +34,12 @@ namespace ExcelCustomAddin
             this.progressBar = new System.Windows.Forms.ProgressBar();
             this.bgwTranslate = new System.ComponentModel.BackgroundWorker();
             this.listofSheet = new System.Windows.Forms.ListBox();
+            this.btnSheetTranslate = new System.Windows.Forms.Button();
             this.SuspendLayout();
             // 
             // txtSourceText
             // 
-            this.txtSourceText.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            this.txtSourceText.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
             this.txtSourceText.BorderStyle = System.Windows.Forms.BorderStyle.None;
             this.txtSourceText.Font = new System.Drawing.Font("Meiryo UI", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
@@ -53,7 +51,7 @@ namespace ExcelCustomAddin
             // 
             // buttonTranslate
             // 
-            this.buttonTranslate.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            this.buttonTranslate.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
             this.buttonTranslate.Font = new System.Drawing.Font("Meiryo UI", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.buttonTranslate.ForeColor = System.Drawing.Color.Black;
@@ -67,8 +65,8 @@ namespace ExcelCustomAddin
             // 
             // txtDesText
             // 
-            this.txtDesText.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Left) 
+            this.txtDesText.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
+            | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
             this.txtDesText.BorderStyle = System.Windows.Forms.BorderStyle.None;
             this.txtDesText.Font = new System.Drawing.Font("Tahoma", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
@@ -96,21 +94,35 @@ namespace ExcelCustomAddin
             // 
             // listofSheet
             // 
-            this.listofSheet.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
+            this.listofSheet.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
             this.listofSheet.Font = new System.Drawing.Font("Meiryo UI", 9.75F);
             this.listofSheet.FormattingEnabled = true;
             this.listofSheet.ItemHeight = 17;
             this.listofSheet.Location = new System.Drawing.Point(0, 614);
             this.listofSheet.Name = "listofSheet";
-            this.listofSheet.Size = new System.Drawing.Size(402, 191);
+            this.listofSheet.Size = new System.Drawing.Size(402, 157);
             this.listofSheet.TabIndex = 10;
-            this.listofSheet.SelectedIndexChanged += new System.EventHandler(this.listofSheet_SelectedIndexChanged);
+            // 
+            // btnSheetTranslate
+            // 
+            this.btnSheetTranslate.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.btnSheetTranslate.Font = new System.Drawing.Font("Meiryo UI", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.btnSheetTranslate.ForeColor = System.Drawing.Color.Black;
+            this.btnSheetTranslate.Location = new System.Drawing.Point(0, 779);
+            this.btnSheetTranslate.Name = "btnSheetTranslate";
+            this.btnSheetTranslate.Size = new System.Drawing.Size(402, 34);
+            this.btnSheetTranslate.TabIndex = 11;
+            this.btnSheetTranslate.Text = "SHEET TRANSLATE";
+            this.btnSheetTranslate.UseVisualStyleBackColor = true;
+            this.btnSheetTranslate.Click += new System.EventHandler(this.btnSheetTranslate_Click);
             // 
             // ActionPanelControl
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+            this.Controls.Add(this.btnSheetTranslate);
             this.Controls.Add(this.listofSheet);
             this.Controls.Add(this.progressBar);
             this.Controls.Add(this.txtDesText);
@@ -129,5 +141,6 @@ namespace ExcelCustomAddin
         public System.Windows.Forms.ProgressBar progressBar;
         public System.ComponentModel.BackgroundWorker bgwTranslate;
         public System.Windows.Forms.ListBox listofSheet;
+        private System.Windows.Forms.Button btnSheetTranslate;
     }
 }
