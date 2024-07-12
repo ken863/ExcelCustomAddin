@@ -28,119 +28,123 @@
         /// </summary>
         private void InitializeComponent()
         {
-            this.txtSourceText = new System.Windows.Forms.RichTextBox();
-            this.buttonTranslate = new System.Windows.Forms.Button();
-            this.txtDesText = new System.Windows.Forms.RichTextBox();
-            this.progressBar = new System.Windows.Forms.ProgressBar();
-            this.bgwTranslate = new System.ComponentModel.BackgroundWorker();
             this.listofSheet = new System.Windows.Forms.ListBox();
-            this.btnSheetTranslate = new System.Windows.Forms.Button();
+            this.txtSourceText = new MetroFramework.Controls.MetroTextBox();
+            this.metroPanel1 = new MetroFramework.Controls.MetroPanel();
+            this.btnSheetTranslate = new MetroFramework.Controls.MetroButton();
+            this.btnTranslateSelectedText = new MetroFramework.Controls.MetroButton();
+            this.progressBar = new MetroFramework.Controls.MetroProgressBar();
+            this.txtDesText = new MetroFramework.Controls.MetroTextBox();
+            this.metroPanel1.SuspendLayout();
             this.SuspendLayout();
+            // 
+            // listofSheet
+            // 
+            this.listofSheet.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
+            | System.Windows.Forms.AnchorStyles.Left)
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.listofSheet.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.listofSheet.FormattingEnabled = true;
+            this.listofSheet.ItemHeight = 15;
+            this.listofSheet.Location = new System.Drawing.Point(0, 541);
+            this.listofSheet.Name = "listofSheet";
+            this.listofSheet.Size = new System.Drawing.Size(282, 274);
+            this.listofSheet.TabIndex = 10;
             // 
             // txtSourceText
             // 
             this.txtSourceText.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.txtSourceText.BorderStyle = System.Windows.Forms.BorderStyle.None;
-            this.txtSourceText.Font = new System.Drawing.Font("Meiryo UI", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.txtSourceText.Location = new System.Drawing.Point(0, 0);
+            this.txtSourceText.Multiline = true;
             this.txtSourceText.Name = "txtSourceText";
-            this.txtSourceText.Size = new System.Drawing.Size(402, 285);
-            this.txtSourceText.TabIndex = 4;
-            this.txtSourceText.Text = "";
+            this.txtSourceText.Size = new System.Drawing.Size(282, 235);
+            this.txtSourceText.TabIndex = 12;
+            this.txtSourceText.Theme = MetroFramework.MetroThemeStyle.Dark;
             // 
-            // buttonTranslate
+            // metroPanel1
             // 
-            this.buttonTranslate.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.buttonTranslate.Font = new System.Drawing.Font("Meiryo UI", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.buttonTranslate.ForeColor = System.Drawing.Color.Black;
-            this.buttonTranslate.Location = new System.Drawing.Point(0, 291);
-            this.buttonTranslate.Name = "buttonTranslate";
-            this.buttonTranslate.Size = new System.Drawing.Size(402, 34);
-            this.buttonTranslate.TabIndex = 7;
-            this.buttonTranslate.Text = "TRANSLATE";
-            this.buttonTranslate.UseVisualStyleBackColor = true;
-            this.buttonTranslate.Click += new System.EventHandler(this.ButtonTranslate_Click);
-            // 
-            // txtDesText
-            // 
-            this.txtDesText.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
-            | System.Windows.Forms.AnchorStyles.Left)
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.txtDesText.BorderStyle = System.Windows.Forms.BorderStyle.None;
-            this.txtDesText.Font = new System.Drawing.Font("Tahoma", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.txtDesText.Location = new System.Drawing.Point(0, 331);
-            this.txtDesText.Name = "txtDesText";
-            this.txtDesText.ReadOnly = true;
-            this.txtDesText.Size = new System.Drawing.Size(402, 277);
-            this.txtDesText.TabIndex = 8;
-            this.txtDesText.Text = "";
-            // 
-            // progressBar
-            // 
-            this.progressBar.Dock = System.Windows.Forms.DockStyle.Bottom;
-            this.progressBar.Location = new System.Drawing.Point(0, 813);
-            this.progressBar.Name = "progressBar";
-            this.progressBar.Size = new System.Drawing.Size(402, 10);
-            this.progressBar.Style = System.Windows.Forms.ProgressBarStyle.Marquee;
-            this.progressBar.TabIndex = 9;
-            this.progressBar.Visible = false;
-            // 
-            // bgwTranslate
-            // 
-            this.bgwTranslate.WorkerReportsProgress = true;
-            this.bgwTranslate.DoWork += new System.ComponentModel.DoWorkEventHandler(this.bgwTranslate_DoWork);
-            // 
-            // listofSheet
-            // 
-            this.listofSheet.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.listofSheet.Font = new System.Drawing.Font("Meiryo UI", 9.75F);
-            this.listofSheet.FormattingEnabled = true;
-            this.listofSheet.ItemHeight = 17;
-            this.listofSheet.Location = new System.Drawing.Point(0, 614);
-            this.listofSheet.Name = "listofSheet";
-            this.listofSheet.Size = new System.Drawing.Size(402, 157);
-            this.listofSheet.TabIndex = 10;
+            this.metroPanel1.Controls.Add(this.listofSheet);
+            this.metroPanel1.Controls.Add(this.btnSheetTranslate);
+            this.metroPanel1.Controls.Add(this.btnTranslateSelectedText);
+            this.metroPanel1.Controls.Add(this.progressBar);
+            this.metroPanel1.Controls.Add(this.txtDesText);
+            this.metroPanel1.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.metroPanel1.HorizontalScrollbarBarColor = true;
+            this.metroPanel1.HorizontalScrollbarHighlightOnWheel = false;
+            this.metroPanel1.HorizontalScrollbarSize = 10;
+            this.metroPanel1.Location = new System.Drawing.Point(0, 0);
+            this.metroPanel1.Name = "metroPanel1";
+            this.metroPanel1.Size = new System.Drawing.Size(282, 823);
+            this.metroPanel1.TabIndex = 13;
+            this.metroPanel1.Theme = MetroFramework.MetroThemeStyle.Dark;
+            this.metroPanel1.VerticalScrollbarBarColor = true;
+            this.metroPanel1.VerticalScrollbarHighlightOnWheel = false;
+            this.metroPanel1.VerticalScrollbarSize = 10;
             // 
             // btnSheetTranslate
             // 
-            this.btnSheetTranslate.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)
+            this.btnSheetTranslate.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.btnSheetTranslate.Font = new System.Drawing.Font("Meiryo UI", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.btnSheetTranslate.ForeColor = System.Drawing.Color.Black;
-            this.btnSheetTranslate.Location = new System.Drawing.Point(0, 779);
+            this.btnSheetTranslate.Location = new System.Drawing.Point(88, 482);
             this.btnSheetTranslate.Name = "btnSheetTranslate";
-            this.btnSheetTranslate.Size = new System.Drawing.Size(402, 34);
-            this.btnSheetTranslate.TabIndex = 11;
+            this.btnSheetTranslate.Size = new System.Drawing.Size(195, 38);
+            this.btnSheetTranslate.TabIndex = 16;
             this.btnSheetTranslate.Text = "SHEET TRANSLATE";
-            this.btnSheetTranslate.UseVisualStyleBackColor = true;
+            this.btnSheetTranslate.Theme = MetroFramework.MetroThemeStyle.Dark;
             this.btnSheetTranslate.Click += new System.EventHandler(this.btnSheetTranslate_Click);
+            // 
+            // btnTranslateSelectedText
+            // 
+            this.btnTranslateSelectedText.Location = new System.Drawing.Point(0, 482);
+            this.btnTranslateSelectedText.Name = "btnTranslateSelectedText";
+            this.btnTranslateSelectedText.Size = new System.Drawing.Size(82, 38);
+            this.btnTranslateSelectedText.TabIndex = 15;
+            this.btnTranslateSelectedText.Text = "TRANSLATE";
+            this.btnTranslateSelectedText.Theme = MetroFramework.MetroThemeStyle.Dark;
+            this.btnTranslateSelectedText.Click += new System.EventHandler(this.btnTranslateSelectedText_Click);
+            // 
+            // progressBar
+            // 
+            this.progressBar.Location = new System.Drawing.Point(0, 526);
+            this.progressBar.Name = "progressBar";
+            this.progressBar.ProgressBarStyle = System.Windows.Forms.ProgressBarStyle.Marquee;
+            this.progressBar.Size = new System.Drawing.Size(282, 10);
+            this.progressBar.TabIndex = 14;
+            this.progressBar.Theme = MetroFramework.MetroThemeStyle.Dark;
+            this.progressBar.Visible = false;
+            // 
+            // txtDesText
+            // 
+            this.txtDesText.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.txtDesText.Location = new System.Drawing.Point(0, 241);
+            this.txtDesText.Multiline = true;
+            this.txtDesText.Name = "txtDesText";
+            this.txtDesText.Size = new System.Drawing.Size(282, 235);
+            this.txtDesText.TabIndex = 13;
+            this.txtDesText.Theme = MetroFramework.MetroThemeStyle.Dark;
             // 
             // ActionPanelControl
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.Controls.Add(this.btnSheetTranslate);
-            this.Controls.Add(this.listofSheet);
-            this.Controls.Add(this.progressBar);
-            this.Controls.Add(this.txtDesText);
-            this.Controls.Add(this.buttonTranslate);
             this.Controls.Add(this.txtSourceText);
+            this.Controls.Add(this.metroPanel1);
             this.Name = "ActionPanelControl";
-            this.Size = new System.Drawing.Size(402, 823);
+            this.Size = new System.Drawing.Size(282, 823);
+            this.metroPanel1.ResumeLayout(false);
             this.ResumeLayout(false);
 
         }
 
         #endregion
-        public System.Windows.Forms.RichTextBox txtSourceText;
-        private System.Windows.Forms.Button buttonTranslate;
-        public System.Windows.Forms.RichTextBox txtDesText;
-        public System.Windows.Forms.ProgressBar progressBar;
-        public System.ComponentModel.BackgroundWorker bgwTranslate;
         public System.Windows.Forms.ListBox listofSheet;
-        private System.Windows.Forms.Button btnSheetTranslate;
+        private MetroFramework.Controls.MetroPanel metroPanel1;
+        public MetroFramework.Controls.MetroTextBox txtSourceText;
+        public MetroFramework.Controls.MetroTextBox txtDesText;
+        public MetroFramework.Controls.MetroProgressBar progressBar;
+        public MetroFramework.Controls.MetroButton btnSheetTranslate;
+        public MetroFramework.Controls.MetroButton btnTranslateSelectedText;
     }
 }

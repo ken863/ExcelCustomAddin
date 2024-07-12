@@ -9,11 +9,8 @@
 
     public class ChatGPTClient
     {
-        private readonly string _apiKey;
-
-        public ChatGPTClient(string apiKey)
+        public ChatGPTClient()
         {
-            _apiKey = apiKey;
             ServicePointManager.Expect100Continue = true;
             ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
         }
@@ -22,6 +19,7 @@
         {
             try
             {
+                string _apiKey = "sk-proj-KHBw6jj2cKclN3xmD5olT3BlbkFJekvhNIP9ykw0F1xIScCD";
                 HttpClient client = new HttpClient();
                 var url = "https://api.openai.com/v1/chat/completions";
                 var payload = new

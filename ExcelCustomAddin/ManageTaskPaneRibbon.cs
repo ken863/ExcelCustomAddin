@@ -1,5 +1,6 @@
 ﻿using Microsoft.Office.Tools.Ribbon;
 using System;
+using System.Windows;
 
 namespace ExcelCustomAddin
 {
@@ -16,9 +17,9 @@ namespace ExcelCustomAddin
             {
                 Globals.ThisAddIn.myCustomTaskPane.Visible = !Globals.ThisAddIn.myCustomTaskPane.Visible;
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
-
+                MessageBox.Show(ex.Message);
             }
         }
     }
