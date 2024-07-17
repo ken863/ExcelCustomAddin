@@ -61,7 +61,7 @@
             Globals.ThisAddIn.Application.WorkbookOpen += Application_WorkbookOpen;
             Globals.ThisAddIn.Application.WorkbookActivate += Application_WorkbookActive;
             Globals.ThisAddIn.Application.SheetSelectionChange += Application_SheetSelectionChange;
-            Globals.ThisAddIn.Application.SheetActivate += Application_SheetActivate;
+            //Globals.ThisAddIn.Application.SheetActivate += Application_SheetActivate;
 
             // Tạo ActionPane
             this.CreateActionsPane(this.Application.ActiveWorkbook);
@@ -102,9 +102,9 @@
                 // Get Active ActionsPanel
                 myCustomTaskPane = TaskPaneManager.GetTaskPane(Wb.Name, "TRANSLATE TOOL", () => new ActionPanelControl());
                 _actionPanel = (ActionPanelControl)myCustomTaskPane?.Control;
-                _actionPanel.listofSheet.DataSource = this.GetListOfSheet();
-                _actionPanel.listofSheet.SelectedIndexChanged -= this.ListOfSheet_SelectionChanged;
-                _actionPanel.listofSheet.SelectedIndexChanged += this.ListOfSheet_SelectionChanged;
+                //_actionPanel.listofSheet.DataSource = this.GetListOfSheet();
+                //_actionPanel.listofSheet.SelectedIndexChanged -= this.ListOfSheet_SelectionChanged;
+                //_actionPanel.listofSheet.SelectedIndexChanged += this.ListOfSheet_SelectionChanged;
                 _actionPanel.TranslateSheetEvent += this.TranslateSheetAsync;
                 _actionPanel.TranslateSelectedEvent += this.TranslateSelectedEvent;
             }
@@ -112,72 +112,72 @@
         #endregion
 
         #region "Chức năng tạo danh sách sheet"
-        /// <summary>
-        /// ListOfSheet_SelectionChanged
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        private void ListOfSheet_SelectionChanged(object sender, EventArgs e)
-        {
-            if (this.IsSheetActivating)
-            {
-                return;
-            }
+        ///// <summary>
+        ///// ListOfSheet_SelectionChanged
+        ///// </summary>
+        ///// <param name="sender"></param>
+        ///// <param name="e"></param>
+        //private void ListOfSheet_SelectionChanged(object sender, EventArgs e)
+        //{
+        //    if (this.IsSheetActivating)
+        //    {
+        //        return;
+        //    }
 
-            this.SetActiveSheet();
-        }
+        //    this.SetActiveSheet();
+        //}
 
-        /// <summary>
-        /// SetActiveSheet
-        /// </summary>
-        private void SetActiveSheet()
-        {
-            var selectedSheetName = _actionPanel.listofSheet.SelectedValue?.ToString();
-            if (!string.IsNullOrEmpty(selectedSheetName))
-            {
-                // Sử dụng LINQ để tìm worksheet theo tên
-                Worksheet sheet = Globals.ThisAddIn.Application.ActiveWorkbook.Sheets
-                    .Cast<Worksheet>()
-                    .FirstOrDefault(ws => ws.Name == selectedSheetName);
+        ///// <summary>
+        ///// SetActiveSheet
+        ///// </summary>
+        //private void SetActiveSheet()
+        //{
+        //    var selectedSheetName = _actionPanel.listofSheet.SelectedValue?.ToString();
+        //    if (!string.IsNullOrEmpty(selectedSheetName))
+        //    {
+        //        // Sử dụng LINQ để tìm worksheet theo tên
+        //        Worksheet sheet = Globals.ThisAddIn.Application.ActiveWorkbook.Sheets
+        //            .Cast<Worksheet>()
+        //            .FirstOrDefault(ws => ws.Name == selectedSheetName);
 
-                if (sheet != null)
-                {
-                    // Đặt worksheet này là active sheet
-                    sheet.Activate();
-                }
-            }
-        }
+        //        if (sheet != null)
+        //        {
+        //            // Đặt worksheet này là active sheet
+        //            sheet.Activate();
+        //        }
+        //    }
+        //}
 
-        /// <summary>
-        /// Application_SheetActivate
-        /// </summary>
-        /// <param name="Sh"></param>
-        private void Application_SheetActivate(object Sh)
-        {
-            this.IsSheetActivating = true;
-            _actionPanel.listofSheet.DataSource = this.GetListOfSheet();
-            _actionPanel.listofSheet.SelectedIndex = FindIndexOfSelectedSheet();
-            this.IsSheetActivating = false;
-        }
+        ///// <summary>
+        ///// Application_SheetActivate
+        ///// </summary>
+        ///// <param name="Sh"></param>
+        //private void Application_SheetActivate(object Sh)
+        //{
+        //    this.IsSheetActivating = true;
+        //    _actionPanel.listofSheet.DataSource = this.GetListOfSheet();
+        //    _actionPanel.listofSheet.SelectedIndex = FindIndexOfSelectedSheet();
+        //    this.IsSheetActivating = false;
+        //}
 
         /// <summary>
         /// GetListOfSheet
         /// </summary>
         /// <returns></returns>
-        private List<string> GetListOfSheet()
-        {
-            return (from Worksheet sheet in Globals.ThisAddIn.Application.ActiveWorkbook.Sheets select sheet.Name).ToList();
-        }
+        //private List<string> GetListOfSheet()
+        //{
+        //    return (from Worksheet sheet in Globals.ThisAddIn.Application.ActiveWorkbook.Sheets select sheet.Name).ToList();
+        //}
 
-        /// <summary>
-        /// FindIndexOfSelectedSheet
-        /// </summary>
-        /// <returns></returns>
-        private int FindIndexOfSelectedSheet()
-        {
-            return _actionPanel.listofSheet.Items.Cast<string>().ToList()
-                .FindIndex(item => item == Globals.ThisAddIn.Application.ActiveWorkbook.ActiveSheet.Name);
-        }
+        ///// <summary>
+        ///// FindIndexOfSelectedSheet
+        ///// </summary>
+        ///// <returns></returns>
+        //private int FindIndexOfSelectedSheet()
+        //{
+        //    return _actionPanel.listofSheet.Items.Cast<string>().ToList()
+        //        .FindIndex(item => item == Globals.ThisAddIn.Application.ActiveWorkbook.ActiveSheet.Name);
+        //}
         #endregion
 
         #region "Chức năng chọn cell"
@@ -188,7 +188,7 @@
         /// <param name="target"></param>
         private void Application_SheetSelectionChange(object sh, Range target)
         {
-            if (myCustomTaskPane.Visible)
+            if (myCustomTaskPane != null && myCustomTaskPane.Visible)
             {
                 StringBuilder sb = new StringBuilder();
 
