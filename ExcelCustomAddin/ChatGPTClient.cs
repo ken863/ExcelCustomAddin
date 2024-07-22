@@ -17,14 +17,19 @@
 
         public async Task<string> CallChatGPTAsync(string prompt)
         {
+            if (string.IsNullOrEmpty(Properties.Settings.Default.API_KEY) || string.IsNullOrEmpty(Properties.Settings.Default.MODEL))
+            {
+                return "Vui lòng setting API Key!!!";
+            }
+
             try
             {
-                string _apiKey = "sk-proj-KHBw6jj2cKclN3xmD5olT3BlbkFJekvhNIP9ykw0F1xIScCD";
+                string _apiKey = Properties.Settings.Default.API_KEY;
                 HttpClient client = new HttpClient();
                 var url = "https://api.openai.com/v1/chat/completions";
                 var payload = new
                 {
-                    model = "gpt-4o-2024-05-13",
+                    model = Properties.Settings.Default.MODEL,
                     messages = new[] {
                         new {
                             role = "system", content = $"Dịch sang tiếng việt: {prompt}"

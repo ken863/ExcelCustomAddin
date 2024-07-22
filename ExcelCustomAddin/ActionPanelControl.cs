@@ -5,10 +5,14 @@ namespace ExcelCustomAddin
 {
     public partial class ActionPanelControl : UserControl
     {
-
+        /// <summary>
+        /// ActionPanelControl
+        /// </summary>
         public ActionPanelControl()
         {
             InitializeComponent();
+            txtApiKey.Text = Properties.Settings.Default.API_KEY;
+            txtModel.Text = Properties.Settings.Default.MODEL;
         }
 
         public event EventHandler TranslateSheetEvent;
@@ -34,6 +38,28 @@ namespace ExcelCustomAddin
         {
             if (this.TranslateSheetEvent != null)
                 this.TranslateSheetEvent(this, e);
+        }
+
+        /// <summary>
+        /// txtApiKey_TextChanged
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void txtApiKey_TextChanged(object sender, EventArgs e)
+        {
+            Properties.Settings.Default.API_KEY = txtApiKey.Text.Trim();
+            Properties.Settings.Default.Save();
+        }
+
+        /// <summary>
+        /// txtModel_TextChanged
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void txtModel_TextChanged(object sender, EventArgs e)
+        {
+            Properties.Settings.Default.MODEL = txtModel.Text.Trim();
+            Properties.Settings.Default.Save();
         }
     }
 }

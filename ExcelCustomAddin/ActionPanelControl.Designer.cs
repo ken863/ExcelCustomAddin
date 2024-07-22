@@ -30,11 +30,13 @@
         {
             this.metroPanel1 = new MetroFramework.Controls.MetroPanel();
             this.splitContainer1 = new System.Windows.Forms.SplitContainer();
+            this.txtSourceText = new MetroFramework.Controls.MetroTextBox();
+            this.txtDesText = new MetroFramework.Controls.MetroTextBox();
             this.btnSheetTranslate = new MetroFramework.Controls.MetroButton();
             this.btnTranslateSelectedText = new MetroFramework.Controls.MetroButton();
             this.progressBar = new MetroFramework.Controls.MetroProgressBar();
-            this.txtSourceText = new MetroFramework.Controls.MetroTextBox();
-            this.txtDesText = new MetroFramework.Controls.MetroTextBox();
+            this.txtApiKey = new MetroFramework.Controls.MetroTextBox();
+            this.txtModel = new MetroFramework.Controls.MetroTextBox();
             this.metroPanel1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).BeginInit();
             this.splitContainer1.Panel1.SuspendLayout();
@@ -44,6 +46,8 @@
             // 
             // metroPanel1
             // 
+            this.metroPanel1.Controls.Add(this.txtModel);
+            this.metroPanel1.Controls.Add(this.txtApiKey);
             this.metroPanel1.Controls.Add(this.splitContainer1);
             this.metroPanel1.Controls.Add(this.btnSheetTranslate);
             this.metroPanel1.Controls.Add(this.btnTranslateSelectedText);
@@ -66,7 +70,7 @@
             this.splitContainer1.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.splitContainer1.Location = new System.Drawing.Point(0, 0);
+            this.splitContainer1.Location = new System.Drawing.Point(0, 59);
             this.splitContainer1.Name = "splitContainer1";
             this.splitContainer1.Orientation = System.Windows.Forms.Orientation.Horizontal;
             // 
@@ -77,15 +81,35 @@
             // splitContainer1.Panel2
             // 
             this.splitContainer1.Panel2.Controls.Add(this.txtDesText);
-            this.splitContainer1.Size = new System.Drawing.Size(282, 768);
-            this.splitContainer1.SplitterDistance = 365;
+            this.splitContainer1.Size = new System.Drawing.Size(282, 712);
+            this.splitContainer1.SplitterDistance = 338;
             this.splitContainer1.TabIndex = 17;
+            // 
+            // txtSourceText
+            // 
+            this.txtSourceText.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.txtSourceText.Location = new System.Drawing.Point(0, 0);
+            this.txtSourceText.Multiline = true;
+            this.txtSourceText.Name = "txtSourceText";
+            this.txtSourceText.Size = new System.Drawing.Size(282, 338);
+            this.txtSourceText.TabIndex = 13;
+            this.txtSourceText.Theme = MetroFramework.MetroThemeStyle.Dark;
+            // 
+            // txtDesText
+            // 
+            this.txtDesText.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.txtDesText.Location = new System.Drawing.Point(0, 0);
+            this.txtDesText.Multiline = true;
+            this.txtDesText.Name = "txtDesText";
+            this.txtDesText.Size = new System.Drawing.Size(282, 370);
+            this.txtDesText.TabIndex = 14;
+            this.txtDesText.Theme = MetroFramework.MetroThemeStyle.Dark;
             // 
             // btnSheetTranslate
             // 
             this.btnSheetTranslate.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.btnSheetTranslate.Location = new System.Drawing.Point(88, 774);
+            this.btnSheetTranslate.Location = new System.Drawing.Point(88, 783);
             this.btnSheetTranslate.Name = "btnSheetTranslate";
             this.btnSheetTranslate.Size = new System.Drawing.Size(194, 38);
             this.btnSheetTranslate.TabIndex = 16;
@@ -96,7 +120,7 @@
             // btnTranslateSelectedText
             // 
             this.btnTranslateSelectedText.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
-            this.btnTranslateSelectedText.Location = new System.Drawing.Point(0, 773);
+            this.btnTranslateSelectedText.Location = new System.Drawing.Point(0, 783);
             this.btnTranslateSelectedText.Name = "btnTranslateSelectedText";
             this.btnTranslateSelectedText.Size = new System.Drawing.Size(82, 38);
             this.btnTranslateSelectedText.TabIndex = 15;
@@ -108,7 +132,7 @@
             // 
             this.progressBar.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.progressBar.Location = new System.Drawing.Point(0, 813);
+            this.progressBar.Location = new System.Drawing.Point(0, 772);
             this.progressBar.Name = "progressBar";
             this.progressBar.ProgressBarStyle = System.Windows.Forms.ProgressBarStyle.Marquee;
             this.progressBar.Size = new System.Drawing.Size(282, 10);
@@ -116,25 +140,30 @@
             this.progressBar.Theme = MetroFramework.MetroThemeStyle.Dark;
             this.progressBar.Visible = false;
             // 
-            // txtSourceText
+            // txtApiKey
             // 
-            this.txtSourceText.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.txtSourceText.Location = new System.Drawing.Point(0, 0);
-            this.txtSourceText.Multiline = true;
-            this.txtSourceText.Name = "txtSourceText";
-            this.txtSourceText.Size = new System.Drawing.Size(282, 365);
-            this.txtSourceText.TabIndex = 13;
-            this.txtSourceText.Theme = MetroFramework.MetroThemeStyle.Dark;
+            this.txtApiKey.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.txtApiKey.Location = new System.Drawing.Point(0, 1);
+            this.txtApiKey.Name = "txtApiKey";
+            this.txtApiKey.PasswordChar = '*';
+            this.txtApiKey.PromptText = "API KEY";
+            this.txtApiKey.Size = new System.Drawing.Size(282, 23);
+            this.txtApiKey.TabIndex = 18;
+            this.txtApiKey.Theme = MetroFramework.MetroThemeStyle.Dark;
+            this.txtApiKey.TextChanged += new System.EventHandler(this.txtApiKey_TextChanged);
             // 
-            // txtDesText
+            // txtModel
             // 
-            this.txtDesText.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.txtDesText.Location = new System.Drawing.Point(0, 0);
-            this.txtDesText.Multiline = true;
-            this.txtDesText.Name = "txtDesText";
-            this.txtDesText.Size = new System.Drawing.Size(282, 399);
-            this.txtDesText.TabIndex = 14;
-            this.txtDesText.Theme = MetroFramework.MetroThemeStyle.Dark;
+            this.txtModel.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.txtModel.Location = new System.Drawing.Point(0, 30);
+            this.txtModel.Name = "txtModel";
+            this.txtModel.PromptText = "model";
+            this.txtModel.Size = new System.Drawing.Size(282, 23);
+            this.txtModel.TabIndex = 19;
+            this.txtModel.Theme = MetroFramework.MetroThemeStyle.Dark;
+            this.txtModel.TextChanged += new System.EventHandler(this.txtModel_TextChanged);
             // 
             // ActionPanelControl
             // 
@@ -160,5 +189,7 @@
         private System.Windows.Forms.SplitContainer splitContainer1;
         public MetroFramework.Controls.MetroTextBox txtSourceText;
         public MetroFramework.Controls.MetroTextBox txtDesText;
+        public MetroFramework.Controls.MetroTextBox txtApiKey;
+        public MetroFramework.Controls.MetroTextBox txtModel;
     }
 }
