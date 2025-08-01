@@ -155,7 +155,7 @@
             this.btnCreateEvidence.Name = "btnCreateEvidence";
             this.btnCreateEvidence.Size = new System.Drawing.Size(418, 46);
             this.btnCreateEvidence.TabIndex = 18;
-            this.btnCreateEvidence.Text = "Create Evidence";
+            this.btnCreateEvidence.Text = "Create Evidence Sheet";
             this.btnCreateEvidence.UseVisualStyleBackColor = true;
             this.btnCreateEvidence.Click += new System.EventHandler(this.btnCreateEvidence_Click);
             // 

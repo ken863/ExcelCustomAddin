@@ -772,12 +772,14 @@
                     if (window != null)
                     {
                         window.View = XlWindowView.xlPageBreakPreview;
+                        // Thiết lập zoom về 100%
+                        window.Zoom = 100;
                     }
                 }
                 catch (Exception viewEx)
                 {
                     // Log error nhưng không làm gián đoạn quá trình tạo sheet
-                    System.Diagnostics.Debug.WriteLine($"Error setting page break preview: {viewEx.Message}");
+                    System.Diagnostics.Debug.WriteLine($"Error setting page break preview or zoom: {viewEx.Message}");
                 }
 
                 // Tạo hyperlink từ ô hiện tại đến sheet mới
@@ -787,7 +789,7 @@
                 newWs.Cells[1, 1].Value2 = "Back";
 
                 // Tạo hyperlink "Back" từ ô A1 của sheet mới về ô gốc
-                newWs.Hyperlinks.Add(newWs.Cells[1, 1], "", $"'{activeSheet.Name}'!{activeCell.Address[false, false]}", Type.Missing, "Back");
+                newWs.Hyperlinks.Add(newWs.Cells[1, 1], "", $"'{activeSheet.Name}'!{activeCell.Address[false, false]}", Type.Missing, "戻る");
 
                 // Cập nhật danh sách sheet trong action panel
                 if (_actionPanel != null)
