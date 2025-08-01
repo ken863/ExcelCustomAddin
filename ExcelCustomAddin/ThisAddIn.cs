@@ -153,6 +153,12 @@
 
                     // Cập nhật danh sách sheet
                     _actionPanel.listofSheet.DataSource = this.GetListOfSheet();
+
+                    // *** THÊM DÒNG NÀY: Tự động hiển thị Action Panel khi workbook được mở ***
+                    myCustomTaskPane.Visible = true;
+
+                    // Tùy chọn: Đặt độ rộng mặc định cho task pane (tuỳ chỉnh theo nhu cầu)
+                    myCustomTaskPane.Width = 300;
                 }
             }
         }
