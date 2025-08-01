@@ -79,6 +79,7 @@
                     Globals.ThisAddIn.Application.WorkbookOpen -= Application_WorkbookOpen;
                     Globals.ThisAddIn.Application.WorkbookActivate -= Application_WorkbookActive;
                     Globals.ThisAddIn.Application.WorkbookBeforeClose -= Application_WorkbookBeforeClose;
+                    Globals.ThisAddIn.Application.WorkbookAfterSave -= Application_WorkbookAfterSave;
                     Globals.ThisAddIn.Application.SheetActivate -= Application_SheetActivate;
                 }
 
@@ -240,6 +241,7 @@
             Globals.ThisAddIn.Application.WorkbookOpen += Application_WorkbookOpen;
             Globals.ThisAddIn.Application.WorkbookActivate += Application_WorkbookActive;
             Globals.ThisAddIn.Application.WorkbookBeforeClose += Application_WorkbookBeforeClose;
+            Globals.ThisAddIn.Application.WorkbookAfterSave += Application_WorkbookAfterSave;
             Globals.ThisAddIn.Application.SheetActivate += Application_SheetActivate;
 
             // Tạo ActionPane cho workbook hiện tại (nếu có) với delay để tránh trùng lặp
@@ -320,6 +322,21 @@
                 {
                     PinnedSheets.Remove(workbookKey);
                 }
+            }
+        }
+
+        /// <summary>
+        /// Application_WorkbookAfterSave - Cập nhật file path sau khi lưu
+        /// </summary>
+        /// <param name="Wb"></param>
+        /// <param name="Success"></param>
+        private void Application_WorkbookAfterSave(Workbook Wb, bool Success)
+        {
+            if (Wb != null && Success && _actionPanel != null)
+            {
+                // Cập nhật file path display sau khi workbook được lưu thành công
+                _actionPanel.RefreshFilePathDisplay();
+                System.Diagnostics.Debug.WriteLine($"File path refreshed after save for: {Wb.Name}");
             }
         }
 
@@ -722,6 +739,46 @@
 
                 // Đặt độ rộng cột sheet mới
                 newWs.Columns.ColumnWidth = 2.17;
+                newWs.Rows.RowHeight = 12.75; // Giảm chiều cao dòng để fit 48 dòng trên Windows
+
+                // Thiết lập font chữ cho toàn bộ sheet
+                newWs.Cells.Font.Name = "MS PGothic";
+                newWs.Cells.Font.Size = 9; // Giảm font size để fit 48 dòng trên Windows
+
+                // Thiết lập used range tới cột BC (cột 55)
+                // Đặt giá trị vào ô BC1 để mở rộng used range
+                newWs.Cells[1, 55].Value2 = " ";
+
+                // Thiết lập trang in với định hướng ngang và lề trang tới cột BC
+                newWs.PageSetup.Orientation = XlPageOrientation.xlLandscape;
+                newWs.PageSetup.PaperSize = XlPaperSize.xlPaperA4; // Thiết lập kích cỡ giấy A4
+                newWs.PageSetup.PrintArea = "$A$1:$BC$48"; // Thiết lập vùng in từ A1 đến BC48
+                newWs.PageSetup.FitToPagesWide = 1; // Fit tất cả cột vào 1 trang theo chiều rộng
+                newWs.PageSetup.FitToPagesTall = 1; // Fit 48 dòng vào 1 trang theo chiều cao
+                newWs.PageSetup.Zoom = false; // Tắt zoom để sử dụng FitToPages
+
+                // Thiết lập lề trang tối ưu cho Windows (đơn vị: inches)
+                newWs.PageSetup.LeftMargin = newWs.Application.InchesToPoints(0.2);   // Lề trái nhỏ hơn
+                newWs.PageSetup.RightMargin = newWs.Application.InchesToPoints(0.2);  // Lề phải nhỏ hơn
+                newWs.PageSetup.TopMargin = newWs.Application.InchesToPoints(0.2);    // Lề trên nhỏ hơn
+                newWs.PageSetup.BottomMargin = newWs.Application.InchesToPoints(0.2); // Lề dưới nhỏ hơn
+                newWs.PageSetup.HeaderMargin = newWs.Application.InchesToPoints(0.05); // Lề header nhỏ hơn
+                newWs.PageSetup.FooterMargin = newWs.Application.InchesToPoints(0.05); // Lề footer nhỏ hơn
+
+                // Thiết lập view mode thành Page Break Preview
+                try
+                {
+                    var window = newWs.Application.ActiveWindow;
+                    if (window != null)
+                    {
+                        window.View = XlWindowView.xlPageBreakPreview;
+                    }
+                }
+                catch (Exception viewEx)
+                {
+                    // Log error nhưng không làm gián đoạn quá trình tạo sheet
+                    System.Diagnostics.Debug.WriteLine($"Error setting page break preview: {viewEx.Message}");
+                }
 
                 // Tạo hyperlink từ ô hiện tại đến sheet mới
                 activeSheet.Hyperlinks.Add(activeCell, "", $"'{newSheetName}'!A1", Type.Missing, newSheetName);

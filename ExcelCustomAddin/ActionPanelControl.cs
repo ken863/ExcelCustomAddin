@@ -1,14 +1,26 @@
 ﻿using System;
 using System.Drawing;
 using System.Windows.Forms;
+using Microsoft.Win32; // Thêm để sử dụng Registry
 
 namespace ExcelCustomAddin
 {
     public partial class ActionPanelControl : UserControl
     {
+        // Constants cho Registry keys
+        private const string REGISTRY_KEY = @"Software\ExcelCustomAddin";
+        private const string SCALE_PERCENT_KEY = "ScalePercent";
+        private const string IMAGE_PATH_KEY = "ImagePath";
+
         public ActionPanelControl()
         {
             InitializeComponent();
+
+            // Load saved settings
+            LoadSettings();
+
+            // Setup auto-save functionality
+            SetupAutoSave();
 
             // Hiển thị file path tại toolStripFilePath
             UpdateFilePathDisplay();
@@ -252,9 +264,6 @@ namespace ExcelCustomAddin
                 // Cập nhật chiều rộng cột trước khi bind data
                 UpdateColumnWidth();
 
-                // Cập nhật file path display
-                UpdateFilePathDisplay();
-
                 if (sheets != null)
                 {
                     foreach (var sheet in sheets)
@@ -333,5 +342,150 @@ namespace ExcelCustomAddin
         {
             UpdateFilePathDisplay();
         }
+
+        /// <summary>
+        /// toolStripFilePath_Click
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void toolStripFilePath_Click(object sender, EventArgs e)
+        {
+            // Kiem tra xem workbook da duoc luu chua
+            var app = Globals.ThisAddIn.Application;
+            if (app.ActiveWorkbook == null || app.ActiveWorkbook.FullName == "")
+            {
+                return;
+            }
+
+            Clipboard.SetText(toolStripFilePath.Text.Trim());
+
+            // Them xu ly mo folder chua file
+            string folderPath = System.IO.Path.GetDirectoryName(app.ActiveWorkbook.FullName);
+            if (!string.IsNullOrEmpty(folderPath))
+            {
+                // Mở thư mục và chọn file trong Explorer
+                string filePath = app.ActiveWorkbook.FullName;
+                System.Diagnostics.Process.Start("explorer.exe", $"/select,\"{filePath}\"");
+            }
+        }
+
+        #region "Settings Management"
+        /// <summary>
+        /// Load settings từ Registry
+        /// </summary>
+        private void LoadSettings()
+        {
+            try
+            {
+                using (RegistryKey key = Registry.CurrentUser.OpenSubKey(REGISTRY_KEY))
+                {
+                    if (key != null)
+                    {
+                        // Load Scale Percent
+                        object scaleValue = key.GetValue(SCALE_PERCENT_KEY);
+                        if (scaleValue != null && decimal.TryParse(scaleValue.ToString(), out decimal scale))
+                        {
+                            if (numScalePercent != null)
+                            {
+                                // Đảm bảo giá trị trong khoảng cho phép của NumericUpDown
+                                if (scale >= numScalePercent.Minimum && scale <= numScalePercent.Maximum)
+                                {
+                                    numScalePercent.Value = scale;
+                                }
+                            }
+                        }
+
+                        // Load Image Path
+                        object pathValue = key.GetValue(IMAGE_PATH_KEY);
+                        if (pathValue != null && txtImagePath != null)
+                        {
+                            txtImagePath.Text = pathValue.ToString();
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log error nhưng không hiển thị MessageBox để không làm gián đoạn khởi động
+                System.Diagnostics.Debug.WriteLine($"Error loading settings: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Save settings vào Registry
+        /// </summary>
+        private void SaveSettings()
+        {
+            try
+            {
+                using (RegistryKey key = Registry.CurrentUser.CreateSubKey(REGISTRY_KEY))
+                {
+                    if (key != null)
+                    {
+                        // Save Scale Percent
+                        if (numScalePercent != null)
+                        {
+                            key.SetValue(SCALE_PERCENT_KEY, numScalePercent.Value.ToString());
+                        }
+
+                        // Save Image Path
+                        if (txtImagePath != null)
+                        {
+                            key.SetValue(IMAGE_PATH_KEY, txtImagePath.Text.Trim());
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log error nhưng không hiển thị MessageBox
+                System.Diagnostics.Debug.WriteLine($"Error saving settings: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Auto-save settings khi giá trị thay đổi
+        /// </summary>
+        private void SetupAutoSave()
+        {
+            try
+            {
+                // Tự động lưu khi Scale Percent thay đổi
+                if (numScalePercent != null)
+                {
+                    numScalePercent.ValueChanged += (sender, e) => SaveSettings();
+                }
+
+                // Tự động lưu khi Image Path thay đổi (khi focus mất khỏi textbox)
+                if (txtImagePath != null)
+                {
+                    txtImagePath.Leave += (sender, e) => SaveSettings();
+                    txtImagePath.TextChanged += (sender, e) =>
+                    {
+                        // Delay save để tránh lưu quá nhiều lần khi typing
+                        if (_saveTimer != null)
+                        {
+                            _saveTimer.Stop();
+                        }
+                        _saveTimer = new Timer { Interval = 1000 }; // 1 second delay
+                        _saveTimer.Tick += (s, args) =>
+                        {
+                            _saveTimer.Stop();
+                            _saveTimer.Dispose();
+                            _saveTimer = null;
+                            SaveSettings();
+                        };
+                        _saveTimer.Start();
+                    };
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error setting up auto-save: {ex.Message}");
+            }
+        }
+
+        private Timer _saveTimer;
+        #endregion
     }
 }

@@ -109,6 +109,7 @@
             // 
             this.btnInsertPictures.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
+            this.btnInsertPictures.ForeColor = System.Drawing.SystemColors.ActiveCaptionText;
             this.btnInsertPictures.Image = global::ExcelCustomAddin.Properties.Resources.pictures1;
             this.btnInsertPictures.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
             this.btnInsertPictures.Location = new System.Drawing.Point(85, 51);
@@ -137,9 +138,9 @@
             this.metroLabel1.FontWeight = MetroFramework.MetroLabelWeight.Regular;
             this.metroLabel1.Location = new System.Drawing.Point(6, 25);
             this.metroLabel1.Name = "metroLabel1";
-            this.metroLabel1.Size = new System.Drawing.Size(72, 15);
+            this.metroLabel1.Size = new System.Drawing.Size(77, 15);
             this.metroLabel1.TabIndex = 0;
-            this.metroLabel1.Text = "Images Path";
+            this.metroLabel1.Text = "_Images Path";
             // 
             // btnCreateEvidence
             // 
@@ -202,7 +203,7 @@
             | System.Windows.Forms.AnchorStyles.Right)));
             this.listofSheet.BorderStyle = System.Windows.Forms.BorderStyle.None;
             this.listofSheet.ContextMenuStrip = this.contextMenuStrip1;
-            this.listofSheet.Font = new System.Drawing.Font("Segoe UI Semibold", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.listofSheet.Font = new System.Drawing.Font("Meiryo UI", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.listofSheet.FullRowSelect = true;
             this.listofSheet.HeaderStyle = System.Windows.Forms.ColumnHeaderStyle.None;
             this.listofSheet.HideSelection = false;
@@ -257,8 +258,12 @@
             // 
             // toolStripFilePath
             // 
+            this.toolStripFilePath.Font = new System.Drawing.Font("Segoe UI Semibold", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.toolStripFilePath.ForeColor = System.Drawing.SystemColors.ActiveCaptionText;
             this.toolStripFilePath.Name = "toolStripFilePath";
-            this.toolStripFilePath.Size = new System.Drawing.Size(0, 22);
+            this.toolStripFilePath.Size = new System.Drawing.Size(38, 22);
+            this.toolStripFilePath.Text = "Book1";
+            this.toolStripFilePath.Click += new System.EventHandler(this.toolStripFilePath_Click);
             // 
             // ActionPanelControl
             // 
