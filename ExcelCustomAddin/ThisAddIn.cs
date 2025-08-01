@@ -5,9 +5,7 @@
     using System;
     using System.Collections.Generic;
     using System.ComponentModel;
-    using System.IO;
     using System.Linq;
-    using System.Text;
     using System.Windows;
     using System.Windows.Threading;
 
@@ -24,11 +22,6 @@
         public CustomTaskPane myCustomTaskPane { get; set; }
 
         /// <summary>
-        /// BackgroundWorker
-        /// </summary>
-        private BackgroundWorker backgroundWorker;
-
-        /// <summary>
         /// Dispatcher
         /// </summary>
         private Dispatcher _dispatcher;
@@ -42,14 +35,14 @@
         /// <summary>
         /// Lưu trữ danh sách các sheet được pin theo workbook
         /// </summary>
-        private static System.Collections.Generic.Dictionary<string, System.Collections.Generic.HashSet<string>> PinnedSheets
-            = new System.Collections.Generic.Dictionary<string, System.Collections.Generic.HashSet<string>>();
+        private static Dictionary<string, HashSet<string>> PinnedSheets
+            = new Dictionary<string, HashSet<string>>();
 
         /// <summary>
         /// Lưu trữ workbook đã được tạo action panel để tránh tạo trùng lặp
         /// </summary>
-        private static System.Collections.Generic.HashSet<string> CreatedActionPanes
-            = new System.Collections.Generic.HashSet<string>();
+        private static HashSet<string> CreatedActionPanes
+            = new HashSet<string>();
 
         /// <summary>
         /// Lock object để đảm bảo thread safety
@@ -1013,7 +1006,7 @@
         {
             if (!PinnedSheets.ContainsKey(workbookName))
             {
-                PinnedSheets[workbookName] = new System.Collections.Generic.HashSet<string>();
+                PinnedSheets[workbookName] = new HashSet<string>();
             }
 
             if (PinnedSheets[workbookName].Contains(sheetName))
