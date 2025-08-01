@@ -45,7 +45,7 @@
             // 
             this.tab1.ControlId.ControlIdType = Microsoft.Office.Tools.Ribbon.RibbonControlIdType.Office;
             this.tab1.Groups.Add(this.group1);
-            this.tab1.Label = "ANYCUBE TOOLS";
+            this.tab1.Label = "SBA TOOLS";
             this.tab1.Name = "tab1";
             // 
             // group1
@@ -57,8 +57,8 @@
             // btnTranslate
             // 
             this.btnTranslate.ControlSize = Microsoft.Office.Core.RibbonControlSize.RibbonControlSizeLarge;
-            this.btnTranslate.Image = global::ExcelCustomAddin.Properties.Resources.Marcus_Roberto_Google_Play_Google_Translate_512;
-            this.btnTranslate.Label = "Translate";
+            this.btnTranslate.Image = global::ExcelCustomAddin.Properties.Resources.settings;
+            this.btnTranslate.Label = "TOOLS";
             this.btnTranslate.Name = "btnTranslate";
             this.btnTranslate.ShowImage = true;
             this.btnTranslate.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.btnTranslate_Click);
