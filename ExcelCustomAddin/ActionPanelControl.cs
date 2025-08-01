@@ -6,107 +6,148 @@ namespace ExcelCustomAddin
 {
     public partial class ActionPanelControl : UserControl
     {
-
         public ActionPanelControl()
         {
             InitializeComponent();
 
-            // Thiết lập listbox để custom drawing
+            // Hiển thị file path tại toolStripFilePath
+            UpdateFilePathDisplay();
+
+            // Thiết lập ListView cho sheet - TẮT OwnerDraw để sử dụng background tự nhiên
             if (listofSheet != null)
             {
-                listofSheet.DrawMode = DrawMode.OwnerDrawFixed;
-                listofSheet.DrawItem += ListofSheet_DrawItem;
-                listofSheet.ItemHeight = 20; // Tăng chiều cao item để hiển thị màu tốt hơn
+                listofSheet.OwnerDraw = false; // TẮT owner draw
+                listofSheet.FullRowSelect = true;
+                listofSheet.View = View.Details;
+                listofSheet.HeaderStyle = ColumnHeaderStyle.None;
+                listofSheet.HideSelection = false; // Đảm bảo selection hiển thị ngay cả khi ListView không có focus
+                listofSheet.MultiSelect = false;   // Chỉ cho phép chọn một item
+
+                // Tạo cột với chiều rộng ban đầu
+                if (listofSheet.Columns.Count == 0)
+                {
+                    // Sử dụng chiều rộng mặc định nếu ListView chưa có kích thước
+                    int initialWidth = listofSheet.Width > 0 ? listofSheet.Width - 4 : 400;
+                    listofSheet.Columns.Add("Sheet", initialWidth);
+                }
+
+                // Đăng ký event để tự động điều chỉnh chiều rộng cột khi ListView thay đổi kích thước
+                listofSheet.Resize += (sender, e) => UpdateColumnWidth();
+
+                // Đăng ký event Load để cập nhật chiều rộng cột khi control được load
+                this.Load += (sender, e) => UpdateColumnWidth();
+
+                // Đăng ký event SizeChanged để đảm bảo cập nhật trong mọi trường hợp
+                listofSheet.SizeChanged += (sender, e) => UpdateColumnWidth();
+
+                // Đăng ký event để cập nhật context menu khi mở
+                if (this.contextMenuStrip1 != null)
+                {
+                    this.contextMenuStrip1.Opening += ContextMenuStrip1_Opening;
+                }
             }
         }
 
         /// <summary>
-        /// Custom drawing cho listbox items với màu sheet
+        /// Cập nhật chiều rộng cột để khớp với ListView
         /// </summary>
-        private void ListofSheet_DrawItem(object sender, DrawItemEventArgs e)
+        private void UpdateColumnWidth()
         {
-            if (e.Index < 0) return;
-
-            var listBox = sender as ListBox;
-            var item = listBox.Items[e.Index];
-
-            // Tùy chỉnh màu background thay vì sử dụng mặc định
-            Color backgroundColor;
-            Color textColor;
-
-            if ((e.State & DrawItemState.Selected) == DrawItemState.Selected)
+            if (listofSheet?.Columns != null && listofSheet.Columns.Count > 0 && listofSheet.Width > 0)
             {
-                // Màu khi item được chọn
-                backgroundColor = Color.FromArgb(51, 153, 255); // Màu xanh dương nhẹ
-                textColor = Color.White;
+                listofSheet.Columns[0].Width = listofSheet.Width - 4;
             }
-            else if ((e.State & DrawItemState.HotLight) == DrawItemState.HotLight)
-            {
-                // Màu khi hover (nếu hỗ trợ)
-                backgroundColor = Color.FromArgb(230, 240, 255); // Màu xanh rất nhẹ
-                textColor = Color.Black;
-            }
-            else
-            {
-                // Màu bình thường - có thể tùy chỉnh theo sở thích
-                backgroundColor = Color.FromArgb(248, 249, 250); // Màu xám rất nhẹ
-                textColor = Color.Black;
-            }
+        }
 
-            // Vẽ background tùy chỉnh
-            using (var backgroundBrush = new SolidBrush(backgroundColor))
+        /// <summary>
+        /// Cập nhật hiển thị file path tại toolStripFilePath
+        /// </summary>
+        private void UpdateFilePathDisplay()
+        {
+            try
             {
-                e.Graphics.FillRectangle(backgroundBrush, e.Bounds);
-            }
-
-            if (item is ThisAddIn.SheetInfo sheetInfo)
-            {
-                // Vẽ màu tab của sheet (nếu có)
-                if (sheetInfo.HasTabColor)
+                if (toolStripFilePath != null)
                 {
-                    using (var colorBrush = new SolidBrush(sheetInfo.TabColor))
+                    // Lấy file path từ Excel Application
+                    var app = Globals.ThisAddIn.Application;
+                    if (app?.ActiveWorkbook != null)
                     {
-                        var colorRect = new Rectangle(e.Bounds.X + 2, e.Bounds.Y + 2, 16, e.Bounds.Height - 4);
-                        e.Graphics.FillRectangle(colorBrush, colorRect);
-                        e.Graphics.DrawRectangle(Pens.Black, colorRect);
+                        string workbookPath = app.ActiveWorkbook.FullName;
+                        if (!string.IsNullOrEmpty(workbookPath))
+                        {
+                            // Hiển thị đường dẫn đầy đủ
+                            toolStripFilePath.Text = workbookPath;
+                            toolStripFilePath.ToolTipText = workbookPath; // Tooltip để hiển thị full path
+                        }
+                        else
+                        {
+                            // Nếu workbook chưa được save
+                            toolStripFilePath.Text = $"{app.ActiveWorkbook.Name} (Chưa lưu)";
+                            toolStripFilePath.ToolTipText = "Workbook chưa được lưu";
+                        }
+                    }
+                    else
+                    {
+                        toolStripFilePath.Text = "Không có file nào đang mở";
+                        toolStripFilePath.ToolTipText = "";
                     }
                 }
-
-                // Vẽ text tên sheet
-                var textRect = new Rectangle(
-                    e.Bounds.X + (sheetInfo.HasTabColor ? 22 : 4),
-                    e.Bounds.Y,
-                    e.Bounds.Width - (sheetInfo.HasTabColor ? 26 : 8),
-                    e.Bounds.Height
-                );
-
-                using (var textBrush = new SolidBrush(textColor))
-                {
-                    var stringFormat = new StringFormat
-                    {
-                        Alignment = StringAlignment.Near,
-                        LineAlignment = StringAlignment.Center
-                    };
-
-                    e.Graphics.DrawString(sheetInfo.Name, listBox.Font, textBrush, textRect, stringFormat);
-                }
             }
-            else
+            catch (Exception ex)
             {
-                // Fallback cho các item không phải SheetInfo
-                using (var textBrush = new SolidBrush(textColor))
+                System.Diagnostics.Debug.WriteLine($"Error in UpdateFilePathDisplay: {ex.Message}");
+                if (toolStripFilePath != null)
                 {
-                    e.Graphics.DrawString(item.ToString(), listBox.Font, textBrush, e.Bounds);
+                    toolStripFilePath.Text = "Lỗi khi lấy đường dẫn file";
+                    toolStripFilePath.ToolTipText = ex.Message;
                 }
             }
-
-            // Vẽ focus rectangle
-            e.DrawFocusRectangle();
         }
+
+        /// <summary>
+        /// Cập nhật context menu trước khi hiển thị
+        /// </summary>
+        private void ContextMenuStrip1_Opening(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+            try
+            {
+                if (listofSheet?.SelectedItems != null && listofSheet.SelectedItems.Count > 0)
+                {
+                    var selectedItem = listofSheet.SelectedItems[0].Tag as ThisAddIn.SheetInfo;
+                    if (selectedItem != null)
+                    {
+                        // Cập nhật text của menu item dựa trên trạng thái pin
+                        if (this.btnPinSheet != null)
+                        {
+                            this.btnPinSheet.Text = selectedItem.IsPinned ? "Unpin Sheet" : "Pin Sheet";
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error in ContextMenuStrip1_Opening: {ex.Message}");
+                // Cancel context menu if error occurs
+                e.Cancel = true;
+            }
+        }
+
         public event EventHandler FormatEvidenceEvent;
         public event EventHandler CreateEvidenceEvent;
         public event EventHandler FormatDocumentEvent;
         public event EventHandler ChangeSheetNameEvent;
+        public event EventHandler InsertMultipleImagesEvent;
+
+        public event EventHandler<PinSheetEventArgs> PinSheetEvent;
+
+        /// <summary>
+        /// Event args for pin sheet event
+        /// </summary>
+        public class PinSheetEventArgs : EventArgs
+        {
+            public string SheetName { get; set; }
+            public bool IsPinned { get; set; }
+        }
 
         /// <summary>
         /// btnFormatEvidence_Click
@@ -141,10 +182,156 @@ namespace ExcelCustomAddin
                 this.FormatDocumentEvent(this, e);
         }
 
+        /// <summary>
+        /// btnChangeSheetName_Click
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void btnChangeSheetName_Click(object sender, EventArgs e)
         {
             if (this.ChangeSheetNameEvent != null)
                 this.ChangeSheetNameEvent(this, e);
+        }
+
+        /// <summary>
+        /// btnInsertPictures_Click
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void btnInsertPictures_Click(object sender, EventArgs e)
+        {
+            if (this.InsertMultipleImagesEvent != null)
+                this.InsertMultipleImagesEvent(this, e);
+        }
+
+        /// <summary>
+        /// btnPinSheet_Click
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void btnPinSheet_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                if (listofSheet?.SelectedItems != null && listofSheet.SelectedItems.Count > 0)
+                {
+                    var selectedItem = listofSheet.SelectedItems[0].Tag as ThisAddIn.SheetInfo;
+                    if (selectedItem != null && this.PinSheetEvent != null)
+                    {
+                        var args = new PinSheetEventArgs
+                        {
+                            SheetName = selectedItem.Name,
+                            IsPinned = selectedItem.IsPinned
+                        };
+                        this.PinSheetEvent(this, args);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error in btnPinSheet_Click: {ex.Message}");
+                System.Windows.Forms.MessageBox.Show($"Có lỗi xảy ra khi thao tác với sheet: {ex.Message}", "Lỗi",
+                    System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Error);
+            }
+        }
+
+        /// <summary>
+        /// BindSheetList
+        /// </summary>
+        /// <param name="sheets"></param>
+        /// <param name="selectedSheetName"></param>
+        public void BindSheetList(System.Collections.Generic.List<ThisAddIn.SheetInfo> sheets, string selectedSheetName = null)
+        {
+            try
+            {
+                if (listofSheet == null) return;
+
+                listofSheet.Items.Clear();
+                listofSheet.BeginUpdate();
+
+                // Cập nhật chiều rộng cột trước khi bind data
+                UpdateColumnWidth();
+
+                // Cập nhật file path display
+                UpdateFilePathDisplay();
+
+                if (sheets != null)
+                {
+                    foreach (var sheet in sheets)
+                    {
+                        if (sheet == null) continue;
+
+                        var lvi = new ListViewItem(sheet.Name ?? "Unknown");
+                        lvi.Tag = sheet;
+
+                        // Hiển thị trạng thái pin và màu sheet tab
+                        string displayText = "";
+
+                        // Thêm icon pin nếu sheet được pin
+                        if (sheet.IsPinned)
+                        {
+                            displayText += "📌 "; // Pin icon
+                        }
+
+                        // Thêm màu sheet tab nếu có
+                        if (sheet.HasTabColor)
+                        {
+                            displayText += "● "; // Bullet point để biểu thị có màu
+                            lvi.ForeColor = sheet.TabColor; // Đặt màu text
+                        }
+
+                        displayText += sheet.Name;
+                        lvi.Text = displayText;
+
+                        listofSheet.Items.Add(lvi);
+
+                        // Chọn item nếu tên sheet trùng với selectedSheetName
+                        if (selectedSheetName != null && sheet.Name == selectedSheetName)
+                        {
+                            lvi.Selected = true;
+                            lvi.Focused = true;
+                            listofSheet.FocusedItem = lvi;
+                        }
+                    }
+                }
+
+                listofSheet.EndUpdate();
+
+                // Đảm bảo item được chọn hiển thị trong viewport với kiểm tra an toàn
+                try
+                {
+                    if (listofSheet.SelectedItems != null &&
+                        listofSheet.SelectedItems.Count > 0 &&
+                        listofSheet.SelectedItems[0].Index >= 0 &&
+                        listofSheet.SelectedItems[0].Index < listofSheet.Items.Count)
+                    {
+                        listofSheet.EnsureVisible(listofSheet.SelectedItems[0].Index);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // Log error but don't crash
+                    System.Diagnostics.Debug.WriteLine($"Error in EnsureVisible: {ex.Message}");
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error in BindSheetList: {ex.Message}");
+                // Ensure EndUpdate is called even if error occurs
+                try
+                {
+                    listofSheet?.EndUpdate();
+                }
+                catch { }
+            }
+        }
+
+        /// <summary>
+        /// Cập nhật hiển thị file path từ bên ngoài
+        /// </summary>
+        public void RefreshFilePathDisplay()
+        {
+            UpdateFilePathDisplay();
         }
     }
 }

@@ -5,6 +5,7 @@
     using System;
     using System.Collections.Generic;
     using System.ComponentModel;
+    using System.IO;
     using System.Linq;
     using System.Text;
     using System.Windows;
@@ -39,8 +40,23 @@
         private bool IsSheetActivating { get; set; } = false;
 
         /// <summary>
-        /// InternalStartup
+        /// Lưu trữ danh sách các sheet được pin theo workbook
         /// </summary>
+        private static System.Collections.Generic.Dictionary<string, System.Collections.Generic.HashSet<string>> PinnedSheets
+            = new System.Collections.Generic.Dictionary<string, System.Collections.Generic.HashSet<string>>();
+
+        /// <summary>
+        /// Lưu trữ workbook đã được tạo action panel để tránh tạo trùng lặp
+        /// </summary>
+        private static System.Collections.Generic.HashSet<string> CreatedActionPanes
+            = new System.Collections.Generic.HashSet<string>();
+
+        /// <summary>
+        /// Lock object để đảm bảo thread safety
+        /// </summary>
+        private static readonly object _lockObject = new object();        /// <summary>
+                                                                          /// InternalStartup
+                                                                          /// </summary>
         private void InternalStartup()
         {
             this.Startup += new EventHandler(ThisAddIn_Startup);
@@ -62,6 +78,7 @@
                     ((AppEvents_Event)Globals.ThisAddIn.Application).NewWorkbook -= Application_NewWorkbook;
                     Globals.ThisAddIn.Application.WorkbookOpen -= Application_WorkbookOpen;
                     Globals.ThisAddIn.Application.WorkbookActivate -= Application_WorkbookActive;
+                    Globals.ThisAddIn.Application.WorkbookBeforeClose -= Application_WorkbookBeforeClose;
                     Globals.ThisAddIn.Application.SheetActivate -= Application_SheetActivate;
                 }
 
@@ -71,6 +88,8 @@
                     _actionPanel.CreateEvidenceEvent -= this.CreateEvidence;
                     _actionPanel.FormatDocumentEvent -= this.FormatDocument;
                     _actionPanel.ChangeSheetNameEvent -= this.ChangeSheetName;
+                    _actionPanel.PinSheetEvent -= this.PinSheet;
+                    _actionPanel.InsertMultipleImagesEvent -= this.InsertMultipleImages;
                     _actionPanel.listofSheet.SelectedIndexChanged -= this.ListOfSheet_SelectionChanged;
                 }
             }
@@ -78,6 +97,131 @@
             {
                 // Log error if needed, but don't show MessageBox during shutdown
                 System.Diagnostics.Debug.WriteLine($"Error during shutdown: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Xử lý sự kiện chèn nhiều hình ảnh
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void InsertMultipleImages(object sender, EventArgs e)
+        {
+            try
+            {
+                var app = Globals.ThisAddIn.Application;
+                var activeWorkbook = app.ActiveWorkbook;
+                var activeSheet = app.ActiveSheet as Worksheet;
+
+                // Kiểm tra workbook và sheet
+                if (activeWorkbook == null)
+                {
+                    MessageBox.Show("Không có workbook nào đang mở. Vui lòng mở một workbook và thử lại.", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+                    return;
+                }
+                if (activeSheet == null)
+                {
+                    MessageBox.Show("Không có sheet nào đang được chọn. Vui lòng chọn một sheet và thử lại.", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+                    return;
+                }
+
+                // Kiểm tra cell đang chọn
+                Range activeCell = null;
+                try { activeCell = app.ActiveCell as Range; } catch { }
+                if (activeCell == null)
+                {
+                    MessageBox.Show("Không có ô nào đang được chọn hoặc lựa chọn không hợp lệ. Vui lòng chọn một ô và thử lại.", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+                    return;
+                }
+
+                // Kiểm tra sheet có bị bảo vệ không
+                if (activeSheet.ProtectContents || activeSheet.ProtectDrawingObjects || activeSheet.ProtectScenarios)
+                {
+                    MessageBox.Show("Sheet đang được bảo vệ. Vui lòng bỏ bảo vệ sheet và thử lại.", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+                    return;
+                }
+
+                // Đường dẫn thư mục chứa hình ảnh
+                string folderPath = _actionPanel.txtImagePath.Text.Trim();
+
+                // Tạo thư mục nếu chưa tồn tại
+                if (!System.IO.Directory.Exists(folderPath))
+                {
+                    System.IO.Directory.CreateDirectory(folderPath);
+                    MessageBox.Show($"Đã tạo thư mục '{folderPath}'. Vui lòng thêm hình ảnh vào thư mục này và thử lại.", "Thông báo", MessageBoxButton.OK, MessageBoxImage.Information);
+                    return;
+                }
+
+                // Lấy danh sách file hình ảnh
+                string[] imageExtensions = { "*.jpg", "*.jpeg", "*.png", "*.bmp", "*.gif", "*.tiff" };
+                var imageFiles = new List<string>();
+
+                foreach (string extension in imageExtensions)
+                {
+                    var files = System.IO.Directory.GetFiles(folderPath, extension, System.IO.SearchOption.TopDirectoryOnly);
+                    imageFiles.AddRange(files);
+                }
+
+                if (imageFiles.Count == 0)
+                {
+                    MessageBox.Show($"Không tìm thấy file hình ảnh nào trong thư mục '{folderPath}'.\nCác định dạng được hỗ trợ: JPG, JPEG, PNG, BMP, GIF, TIFF", "Thông báo", MessageBoxButton.OK, MessageBoxImage.Information);
+                    return;
+                }
+
+                // Lấy vị trí bắt đầu từ cell hiện tại
+                double topLocation = (double)activeCell.Top;
+                double leftLocation = (double)activeCell.Left;
+                double resizeRate = (double)(_actionPanel.numScalePercent.Value / 100); // Tỷ lệ thu nhỏ hình ảnh
+                int insertedCount = 0;
+                int errorCount = 0;
+
+                // Chèn từng hình ảnh
+                foreach (string imagePath in imageFiles)
+                {
+                    try
+                    {
+                        // Chèn hình ảnh vào sheet
+                        var shape = activeSheet.Shapes.AddPicture(
+                            imagePath,
+                            Microsoft.Office.Core.MsoTriState.msoFalse,
+                            Microsoft.Office.Core.MsoTriState.msoTrue,
+                            (float)leftLocation,
+                            (float)topLocation,
+                            -1, // Width - tự động
+                            -1  // Height - tự động
+                        );
+
+                        // Điều chỉnh kích thước hình ảnh
+                        shape.LockAspectRatio = Microsoft.Office.Core.MsoTriState.msoTrue;
+                        shape.Height = (float)(shape.Height * resizeRate);
+
+                        // Cập nhật vị trí cho hình ảnh tiếp theo
+                        topLocation += shape.Height + activeCell.Height;
+
+                        insertedCount++;
+
+                        // Xóa file sau khi chèn thành công
+                        try
+                        {
+                            // Xóa thuộc tính readonly nếu có
+                            System.IO.File.SetAttributes(imagePath, System.IO.FileAttributes.Normal);
+                            System.IO.File.Delete(imagePath);
+                        }
+                        catch (Exception deleteEx)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"Không thể xóa file {imagePath}: {deleteEx.Message}");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        errorCount++;
+                        System.Diagnostics.Debug.WriteLine($"Lỗi khi chèn hình ảnh {imagePath}: {ex.Message}");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Có lỗi xảy ra khi chèn hình ảnh: {ex.Message}", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -95,10 +239,23 @@
             ((AppEvents_Event)Globals.ThisAddIn.Application).NewWorkbook += Application_NewWorkbook;
             Globals.ThisAddIn.Application.WorkbookOpen += Application_WorkbookOpen;
             Globals.ThisAddIn.Application.WorkbookActivate += Application_WorkbookActive;
+            Globals.ThisAddIn.Application.WorkbookBeforeClose += Application_WorkbookBeforeClose;
             Globals.ThisAddIn.Application.SheetActivate += Application_SheetActivate;
 
-            // Tạo ActionPane
-            this.CreateActionsPane(this.Application.ActiveWorkbook);
+            // Tạo ActionPane cho workbook hiện tại (nếu có) với delay để tránh trùng lặp
+            if (this.Application.ActiveWorkbook != null)
+            {
+                // Sử dụng timer để đảm bảo chỉ tạo 1 lần sau khi startup xong
+                var timer = new System.Windows.Forms.Timer();
+                timer.Interval = 500; // 500ms delay
+                timer.Tick += (s, args) =>
+                {
+                    timer.Stop();
+                    timer.Dispose();
+                    this.CreateActionsPane(this.Application.ActiveWorkbook);
+                };
+                timer.Start();
+            }
         }
 
         #region "Quản lý ActionPane"
@@ -108,6 +265,7 @@
         /// <param name="Wb"></param>
         void Application_NewWorkbook(Workbook Wb)
         {
+            System.Diagnostics.Debug.WriteLine($"Application_NewWorkbook called for: {Wb?.Name}");
             this.CreateActionsPane(Wb);
         }
 
@@ -117,6 +275,7 @@
         /// <param name="Wb"></param>
         private void Application_WorkbookOpen(Workbook Wb)
         {
+            System.Diagnostics.Debug.WriteLine($"Application_WorkbookOpen called for: {Wb?.Name}");
             this.CreateActionsPane(Wb);
         }
 
@@ -126,39 +285,114 @@
         /// <param name="Wb"></param>
         private void Application_WorkbookActive(Workbook Wb)
         {
-            this.CreateActionsPane(Wb);
+            // Khi activate workbook, chỉ cập nhật action panel nếu đã tồn tại
+            // Không tạo mới để tránh trùng lặp với Open/New events
+            if (Wb != null && CreatedActionPanes.Contains(Wb.Name))
+            {
+                // Chỉ cập nhật nếu đã có action panel
+                if (_actionPanel != null)
+                {
+                    var currentSheetName = Wb.ActiveSheet?.Name;
+                    _actionPanel.BindSheetList(this.GetListOfSheet(), currentSheetName);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Application_WorkbookBeforeClose
+        /// </summary>
+        /// <param name="Wb"></param>
+        /// <param name="Cancel"></param>
+        private void Application_WorkbookBeforeClose(Workbook Wb, ref bool Cancel)
+        {
+            if (Wb != null)
+            {
+                string workbookKey = Wb.Name;
+
+                // Xóa workbook khỏi danh sách đã tạo action panel
+                if (CreatedActionPanes.Contains(workbookKey))
+                {
+                    CreatedActionPanes.Remove(workbookKey);
+                }
+
+                // Xóa pinned sheets của workbook này
+                if (PinnedSheets.ContainsKey(workbookKey))
+                {
+                    PinnedSheets.Remove(workbookKey);
+                }
+            }
         }
 
         private void CreateActionsPane(Workbook Wb)
         {
             if (Wb != null)
             {
-                // Get Active ActionsPanel
-                myCustomTaskPane = TaskPaneManager.GetTaskPane(Wb.Name, "WORKSHEET TOOLS", () => new ActionPanelControl());
-                _actionPanel = (ActionPanelControl)myCustomTaskPane?.Control;
+                string workbookKey = Wb.Name;
 
-                if (_actionPanel != null)
+                lock (_lockObject)
                 {
-                    // Hủy đăng ký các event cũ trước khi đăng ký mới để tránh đăng ký trùng lặp
-                    _actionPanel.CreateEvidenceEvent -= this.CreateEvidence;
-                    _actionPanel.FormatDocumentEvent -= this.FormatDocument;
-                    _actionPanel.ChangeSheetNameEvent -= this.ChangeSheetName;
-                    _actionPanel.listofSheet.SelectedIndexChanged -= this.ListOfSheet_SelectionChanged;
+                    // Debug logging
+                    System.Diagnostics.Debug.WriteLine($"CreateActionsPane called for: {workbookKey}");
 
-                    // Đăng ký các event mới
-                    _actionPanel.CreateEvidenceEvent += this.CreateEvidence;
-                    _actionPanel.FormatDocumentEvent += this.FormatDocument;
-                    _actionPanel.ChangeSheetNameEvent += this.ChangeSheetName;
-                    _actionPanel.listofSheet.SelectedIndexChanged += this.ListOfSheet_SelectionChanged;
+                    // Kiểm tra xem action panel đã được tạo cho workbook này chưa
+                    if (CreatedActionPanes.Contains(workbookKey))
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Action panel already exists for: {workbookKey}, updating only");
+                        // Nếu đã tạo rồi, chỉ cần cập nhật danh sách sheet
+                        if (_actionPanel != null && myCustomTaskPane != null)
+                        {
+                            // Đảm bảo task pane đang active cho workbook này
+                            var currentTaskPane = TaskPaneManager.GetTaskPane(workbookKey, "WORKSHEET TOOLS", null);
+                            if (currentTaskPane != null)
+                            {
+                                myCustomTaskPane = currentTaskPane;
+                                _actionPanel = (ActionPanelControl)myCustomTaskPane.Control;
 
-                    // Cập nhật danh sách sheet
-                    _actionPanel.listofSheet.DataSource = this.GetListOfSheet();
+                                var currentSheetName = Wb.ActiveSheet?.Name;
+                                _actionPanel.BindSheetList(this.GetListOfSheet(), currentSheetName);
+                            }
+                        }
+                        return;
+                    }
 
-                    // *** THÊM DÒNG NÀY: Tự động hiển thị Action Panel khi workbook được mở ***
-                    myCustomTaskPane.Visible = true;
+                    System.Diagnostics.Debug.WriteLine($"Creating new action panel for: {workbookKey}");
 
-                    // Tùy chọn: Đặt độ rộng mặc định cho task pane (tuỳ chỉnh theo nhu cầu)
-                    myCustomTaskPane.Width = 300;
+                    // Get Active ActionsPanel
+                    myCustomTaskPane = TaskPaneManager.GetTaskPane(Wb.Name, "WORKSHEET TOOLS", () => new ActionPanelControl());
+                    _actionPanel = (ActionPanelControl)myCustomTaskPane?.Control;
+
+                    if (_actionPanel != null)
+                    {
+                        // Hủy đăng ký các event cũ trước khi đăng ký mới để tránh đăng ký trùng lặp
+                        _actionPanel.CreateEvidenceEvent -= this.CreateEvidence;
+                        _actionPanel.FormatDocumentEvent -= this.FormatDocument;
+                        _actionPanel.ChangeSheetNameEvent -= this.ChangeSheetName;
+                        _actionPanel.InsertMultipleImagesEvent -= this.InsertMultipleImages;
+                        _actionPanel.PinSheetEvent -= this.PinSheet;
+                        _actionPanel.listofSheet.SelectedIndexChanged -= this.ListOfSheet_SelectionChanged;
+
+                        // Đăng ký các event mới
+                        _actionPanel.CreateEvidenceEvent += this.CreateEvidence;
+                        _actionPanel.FormatDocumentEvent += this.FormatDocument;
+                        _actionPanel.ChangeSheetNameEvent += this.ChangeSheetName;
+                        _actionPanel.InsertMultipleImagesEvent += this.InsertMultipleImages;
+                        _actionPanel.PinSheetEvent += this.PinSheet;
+                        _actionPanel.listofSheet.SelectedIndexChanged += this.ListOfSheet_SelectionChanged;
+
+                        // Cập nhật danh sách sheet và chọn sheet hiện tại khi tạo ActionPane
+                        var currentSheetName = Wb.ActiveSheet?.Name;
+                        _actionPanel.BindSheetList(this.GetListOfSheet(), currentSheetName);
+
+                        // *** THÊM DÒNG NÀY: Tự động hiển thị Action Panel khi workbook được mở ***
+                        myCustomTaskPane.Visible = true;
+
+                        // Tùy chọn: Đặt độ rộng mặc định cho task pane (tuỳ chỉnh theo nhu cầu)
+                        myCustomTaskPane.Width = 300;
+
+                        // Đánh dấu workbook này đã được tạo action panel
+                        CreatedActionPanes.Add(workbookKey);
+                        System.Diagnostics.Debug.WriteLine($"Action panel created and marked for: {workbookKey}");
+                    }
                 }
             }
         }
@@ -182,11 +416,17 @@
                     return;
                 }
 
-                // Lấy tên sheet từ listbox thay vì active sheet
-                var selectedItem = _actionPanel.listofSheet.SelectedItem as SheetInfo;
-                if (selectedItem == null || string.IsNullOrEmpty(selectedItem.Name))
+                // Lấy tên sheet từ ListView thay vì active sheet
+                if (_actionPanel.listofSheet.SelectedItems.Count == 0)
                 {
                     MessageBox.Show("Vui lòng chọn một sheet từ danh sách để đổi tên.", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+                    return;
+                }
+
+                var selectedItem = _actionPanel.listofSheet.SelectedItems[0].Tag as SheetInfo;
+                if (selectedItem == null || string.IsNullOrEmpty(selectedItem.Name))
+                {
+                    MessageBox.Show("Không thể lấy thông tin sheet được chọn.", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
                     return;
                 }
 
@@ -232,13 +472,21 @@
                     );
 
                     // Kiểm tra user có hủy không
-                    // Check if the user canceled the input box
-                    if (result == null || result.ToString() == string.Empty)
+                    // Khi user nhấn Cancel, Excel InputBox trả về false (boolean)
+                    // Khi user để trống và OK, trả về empty string
+                    // Khi user nhập dữ liệu hợp lệ, trả về string
+                    if (result == null || result is bool)
                     {
-                        return; // User canceled or provided an empty input
+                        return; // User canceled
                     }
 
-                    newSheetName = result.ToString().Trim();
+                    string resultString = result.ToString().Trim();
+                    if (string.IsNullOrEmpty(resultString))
+                    {
+                        return; // User provided empty input
+                    }
+
+                    newSheetName = resultString;
                 }
 
                 // Kiểm tra user có nhập tên mới không
@@ -309,18 +557,7 @@
                 // Cập nhật danh sách sheet trong action panel
                 if (_actionPanel != null)
                 {
-                    _actionPanel.listofSheet.DataSource = this.GetListOfSheet();
-
-                    // Tìm và chọn lại sheet với tên mới trong listbox
-                    for (int i = 0; i < _actionPanel.listofSheet.Items.Count; i++)
-                    {
-                        if (_actionPanel.listofSheet.Items[i] is SheetInfo sheetInfo &&
-                            sheetInfo.Name == newSheetName)
-                        {
-                            _actionPanel.listofSheet.SelectedIndex = i;
-                            break;
-                        }
-                    }
+                    _actionPanel.BindSheetList(this.GetListOfSheet(), newSheetName);
                 }
 
                 MessageBox.Show($"Đã đổi tên sheet từ '{oldSheetName}' thành '{newSheetName}' thành công.\nĐã cập nhật {updatedLinksCount} hyperlinks.",
@@ -329,6 +566,31 @@
             catch (Exception ex)
             {
                 MessageBox.Show($"Có lỗi xảy ra khi đổi tên sheet: {ex.Message}", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        /// <summary>
+        /// PinSheet - Toggle pin status của sheet
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void PinSheet(object sender, ActionPanelControl.PinSheetEventArgs e)
+        {
+            try
+            {
+                var activeWorkbook = Globals.ThisAddIn.Application.ActiveWorkbook;
+                if (activeWorkbook == null)
+                {
+                    MessageBox.Show("Không có workbook nào đang mở.", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+                    return;
+                }
+
+                string workbookName = activeWorkbook.Name;
+                TogglePinSheet(workbookName, e.SheetName);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Có lỗi xảy ra khi ghim/bỏ ghim sheet: {ex.Message}", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -445,18 +707,10 @@
                     // Nếu sheet đã tồn tại, chỉ tạo hyperlink đến sheet đó
                     activeSheet.Hyperlinks.Add(activeCell, "", $"'{newSheetName}'!A1", Type.Missing, newSheetName);
 
-                    // Cập nhật selection trong listbox để trỏ đến sheet đã tồn tại
+                    // Cập nhật selection trong ListView để trỏ đến sheet đã tồn tại
                     if (_actionPanel != null)
                     {
-                        for (int i = 0; i < _actionPanel.listofSheet.Items.Count; i++)
-                        {
-                            if (_actionPanel.listofSheet.Items[i] is SheetInfo sheetInfo &&
-                                sheetInfo.Name == newSheetName)
-                            {
-                                _actionPanel.listofSheet.SelectedIndex = i;
-                                break;
-                            }
-                        }
+                        _actionPanel.BindSheetList(this.GetListOfSheet(), newSheetName);
                     }
 
                     return;
@@ -481,18 +735,7 @@
                 // Cập nhật danh sách sheet trong action panel
                 if (_actionPanel != null)
                 {
-                    _actionPanel.listofSheet.DataSource = this.GetListOfSheet();
-
-                    // Tìm và chọn sheet mới tạo trong listbox
-                    for (int i = 0; i < _actionPanel.listofSheet.Items.Count; i++)
-                    {
-                        if (_actionPanel.listofSheet.Items[i] is SheetInfo sheetInfo &&
-                            sheetInfo.Name == newSheetName)
-                        {
-                            _actionPanel.listofSheet.SelectedIndex = i;
-                            break;
-                        }
-                    }
+                    _actionPanel.BindSheetList(this.GetListOfSheet(), newSheetName);
                 }
             }
             catch (Exception ex)
@@ -503,6 +746,11 @@
         #endregion
 
         #region "Chức năng tạo danh sách sheet"
+        /// <summary>
+        /// Last selection change time để debounce
+        /// </summary>
+        private DateTime lastSelectionChangeTime = DateTime.MinValue;
+
         /// <summary>
         /// ListOfSheet_SelectionChanged
         /// </summary>
@@ -515,7 +763,27 @@
                 return;
             }
 
-            this.SetActiveSheet();
+            // Debounce để tránh gọi quá nhiều lần
+            lastSelectionChangeTime = DateTime.Now;
+
+            // Sử dụng Task.Delay để debounce
+            var currentTime = lastSelectionChangeTime;
+            System.Threading.Tasks.Task.Delay(300).ContinueWith(t =>
+            {
+                if (currentTime == lastSelectionChangeTime)
+                {
+                    // Chỉ thực hiện nếu không có selection change mới
+                    try
+                    {
+                        System.Windows.Forms.Control.CheckForIllegalCrossThreadCalls = false;
+                        this.SetActiveSheet();
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Exception in delayed SetActiveSheet: {ex.Message}");
+                    }
+                }
+            });
         }
 
         /// <summary>
@@ -523,19 +791,34 @@
         /// </summary>
         private void SetActiveSheet()
         {
-            var selectedItem = _actionPanel.listofSheet.SelectedItem as SheetInfo;
-            if (selectedItem != null && !string.IsNullOrEmpty(selectedItem.Name))
+            try
             {
-                // Sử dụng LINQ để tìm worksheet theo tên
-                Worksheet sheet = Globals.ThisAddIn.Application.ActiveWorkbook.Sheets
-                    .Cast<Worksheet>()
-                    .FirstOrDefault(ws => ws.Name == selectedItem.Name);
-
-                if (sheet != null)
+                if (_actionPanel?.listofSheet?.SelectedItems != null &&
+                    _actionPanel.listofSheet.SelectedItems.Count > 0)
                 {
-                    // Đặt worksheet này là active sheet
-                    sheet.Activate();
+                    var selectedItem = _actionPanel.listofSheet.SelectedItems[0].Tag as SheetInfo;
+                    if (selectedItem != null && !string.IsNullOrEmpty(selectedItem.Name))
+                    {
+                        var activeWorkbook = Globals.ThisAddIn.Application?.ActiveWorkbook;
+                        if (activeWorkbook != null)
+                        {
+                            // Sử dụng LINQ để tìm worksheet theo tên
+                            Worksheet sheet = activeWorkbook.Sheets
+                                .Cast<Worksheet>()
+                                .FirstOrDefault(ws => ws.Name == selectedItem.Name);
+
+                            if (sheet != null)
+                            {
+                                // Đặt worksheet này là active sheet
+                                sheet.Activate();
+                            }
+                        }
+                    }
                 }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error in SetActiveSheet: {ex.Message}");
             }
         }
 
@@ -545,20 +828,34 @@
         /// <param name="Sh"></param>
         private void Application_SheetActivate(object Sh)
         {
-            this.IsSheetActivating = true;
-            _actionPanel.listofSheet.DataSource = this.GetListOfSheet();
-            _actionPanel.listofSheet.SelectedIndex = FindIndexOfSelectedSheet();
-            this.IsSheetActivating = false;
+            try
+            {
+                this.IsSheetActivating = true;
+                var activeSheetName = Globals.ThisAddIn.Application?.ActiveWorkbook?.ActiveSheet?.Name;
+                if (_actionPanel != null)
+                {
+                    _actionPanel.BindSheetList(this.GetListOfSheet(), activeSheetName);
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error in Application_SheetActivate: {ex.Message}");
+            }
+            finally
+            {
+                this.IsSheetActivating = false;
+            }
         }
 
         /// <summary>
-        /// Class để lưu thông tin sheet với màu
+        /// Class để lưu thông tin sheet với màu và trạng thái pin
         /// </summary>
         public class SheetInfo
         {
             public string Name { get; set; }
             public System.Drawing.Color TabColor { get; set; }
             public bool HasTabColor { get; set; }
+            public bool IsPinned { get; set; } = false;
 
             public override string ToString()
             {
@@ -573,6 +870,7 @@
         private List<SheetInfo> GetListOfSheet()
         {
             var sheetInfoList = new List<SheetInfo>();
+            var workbookName = Globals.ThisAddIn.Application.ActiveWorkbook?.Name;
 
             foreach (Worksheet sheet in Globals.ThisAddIn.Application.ActiveWorkbook.Sheets)
             {
@@ -580,7 +878,8 @@
                 {
                     Name = sheet.Name,
                     HasTabColor = false,
-                    TabColor = System.Drawing.Color.White
+                    TabColor = System.Drawing.Color.White,
+                    IsPinned = workbookName != null && IsSheetPinned(workbookName, sheet.Name)
                 };
 
                 // Kiểm tra xem sheet có màu tab không
@@ -618,7 +917,8 @@
                 sheetInfoList.Add(sheetInfo);
             }
 
-            return sheetInfoList;
+            // Sắp xếp: sheet được pin lên đầu, sau đó theo thứ tự bình thường
+            return sheetInfoList.OrderByDescending(s => s.IsPinned).ToList();
         }
 
         /// <summary>
@@ -634,13 +934,55 @@
 
             for (int i = 0; i < _actionPanel.listofSheet.Items.Count; i++)
             {
-                if (_actionPanel.listofSheet.Items[i] is SheetInfo sheetInfo &&
-                    sheetInfo.Name == currentSheetName)
+                var sheetInfo = _actionPanel.listofSheet.Items[i].Tag as SheetInfo;
+                if (sheetInfo != null && sheetInfo.Name == currentSheetName)
                 {
                     return i;
                 }
             }
             return -1;
+        }
+        #endregion
+
+        #region "Pin Sheet Functionality"
+        /// <summary>
+        /// Toggle pin status của sheet
+        /// </summary>
+        /// <param name="workbookName"></param>
+        /// <param name="sheetName"></param>
+        public void TogglePinSheet(string workbookName, string sheetName)
+        {
+            if (!PinnedSheets.ContainsKey(workbookName))
+            {
+                PinnedSheets[workbookName] = new System.Collections.Generic.HashSet<string>();
+            }
+
+            if (PinnedSheets[workbookName].Contains(sheetName))
+            {
+                PinnedSheets[workbookName].Remove(sheetName);
+            }
+            else
+            {
+                PinnedSheets[workbookName].Add(sheetName);
+            }
+
+            // Cập nhật lại danh sách sheet
+            if (_actionPanel != null)
+            {
+                var currentSheetName = Globals.ThisAddIn.Application.ActiveWorkbook?.ActiveSheet?.Name;
+                _actionPanel.BindSheetList(this.GetListOfSheet(), currentSheetName);
+            }
+        }
+
+        /// <summary>
+        /// Kiểm tra xem sheet có được pin không
+        /// </summary>
+        /// <param name="workbookName"></param>
+        /// <param name="sheetName"></param>
+        /// <returns></returns>
+        public bool IsSheetPinned(string workbookName, string sheetName)
+        {
+            return PinnedSheets.ContainsKey(workbookName) && PinnedSheets[workbookName].Contains(sheetName);
         }
         #endregion
     }
