@@ -2,11 +2,15 @@
  * Event handlers for Excel operations
  */
 
+import StorageService from "../services/StorageService";
+
 export class EventHandlers {
   private static sheetActivatedHandlers: Set<() => void> = new Set();
   private static sheetAddedHandlers: Set<() => void> = new Set();
   private static sheetDeletedHandlers: Set<() => void> = new Set();
+  private static workbookClosedHandlers: Set<(workbookName: string) => void> = new Set();
   private static intervalId: NodeJS.Timeout | null = null;
+  private static currentWorkbookName: string = "";
 
   /**
    * Đăng ký event listener cho worksheet activated
@@ -42,6 +46,89 @@ export class EventHandlers {
     return () => {
       this.sheetDeletedHandlers.delete(handler);
     };
+  }
+
+  /**
+   * Đăng ký event listener cho workbook closed
+   */
+  static registerWorkbookClosedHandler(handler: (workbookName: string) => void): () => void {
+    this.workbookClosedHandlers.add(handler);
+    
+    // Return unregister function
+    return () => {
+      this.workbookClosedHandlers.delete(handler);
+    };
+  }
+
+  /**
+   * Khởi tạo workbook monitoring để detect khi workbook đóng
+   */
+  static initializeWorkbookMonitoring(): void {
+    // Monitor cho beforeunload event (khi tab/window đóng)
+    window.addEventListener('beforeunload', this.handleWorkbookClose.bind(this));
+    
+    // Monitor cho visibility change (khi switch tab)
+    document.addEventListener('visibilitychange', this.handleVisibilityChange.bind(this));
+    
+    // Lưu workbook name hiện tại
+    this.updateCurrentWorkbookName();
+    
+    console.log("Workbook monitoring initialized");
+  }
+
+  /**
+   * Cập nhật tên workbook hiện tại
+   */
+  private static async updateCurrentWorkbookName(): Promise<void> {
+    try {
+      await Excel.run(async (context) => {
+        const workbook = context.workbook;
+        workbook.load("name");
+        await context.sync();
+        this.currentWorkbookName = workbook.name;
+      });
+    } catch (error) {
+      console.error("Error getting current workbook name:", error);
+    }
+  }
+
+  /**
+   * Xử lý khi workbook có thể đóng
+   */
+  private static handleWorkbookClose(): void {
+    if (this.currentWorkbookName) {
+      console.log(`Workbook "${this.currentWorkbookName}" is closing, clearing pinned sheets storage`);
+      
+      // Clear storage cho workbook hiện tại
+      StorageService.clearPinnedSheets(this.currentWorkbookName);
+      
+      // Trigger handlers
+      this.workbookClosedHandlers.forEach(handler => {
+        try {
+          handler(this.currentWorkbookName);
+        } catch (error) {
+          console.error("Error in workbook closed handler:", error);
+        }
+      });
+    }
+  }
+
+  /**
+   * Xử lý khi visibility thay đổi (có thể là workbook switch)
+   */
+  private static handleVisibilityChange(): void {
+    if (document.visibilityState === 'hidden') {
+      // Document hidden, có thể workbook đang đóng hoặc switch
+      // Delay một chút để check nếu thực sự đóng
+      setTimeout(() => {
+        if (document.visibilityState === 'hidden') {
+          this.handleWorkbookClose();
+        }
+      }, 1000);
+    } else if (document.visibilityState === 'visible') {
+      // Document visible lại, cập nhật workbook name
+      this.updateCurrentWorkbookName();
+    }
   }
 
   /**
@@ -136,7 +223,13 @@ export class EventHandlers {
     this.sheetActivatedHandlers.clear();
     this.sheetAddedHandlers.clear();
     this.sheetDeletedHandlers.clear();
+    this.workbookClosedHandlers.clear();
     this.stopPolling();
+    
+    // Remove event listeners
+    window.removeEventListener('beforeunload', this.handleWorkbookClose.bind(this));
+    document.removeEventListener('visibilitychange', this.handleVisibilityChange.bind(this));
+    
     console.log("Event handlers cleaned up");
   }
 
@@ -147,13 +240,17 @@ export class EventHandlers {
     activatedHandlers: number;
     addedHandlers: number;
     deletedHandlers: number;
+    workbookClosedHandlers: number;
     isPolling: boolean;
+    currentWorkbook: string;
   } {
     return {
       activatedHandlers: this.sheetActivatedHandlers.size,
       addedHandlers: this.sheetAddedHandlers.size,
       deletedHandlers: this.sheetDeletedHandlers.size,
-      isPolling: this.intervalId !== null
+      workbookClosedHandlers: this.workbookClosedHandlers.size,
+      isPolling: this.intervalId !== null,
+      currentWorkbook: this.currentWorkbookName
     };
   }
 

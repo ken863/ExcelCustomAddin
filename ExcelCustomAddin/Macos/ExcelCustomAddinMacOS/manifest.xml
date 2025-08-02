@@ -7,11 +7,11 @@
   <Version>1.0.0.0</Version>
   <ProviderName>Excel Custom Add-in</ProviderName>
   <DefaultLocale>en-US</DefaultLocale>
-  <DisplayName DefaultValue="Excel Worksheet Tools"/>
-  <Description DefaultValue="Advanced worksheet management tools for Excel."/>
-  <IconUrl DefaultValue="https://localhost:3000/assets/icon-32.png"/>
-  <HighResolutionIconUrl DefaultValue="https://localhost:3000/assets/icon-64.png"/>
-  <SupportUrl DefaultValue="https://www.contoso.com/help"/>
+  <DisplayName DefaultValue="Excel Custom Add-in"/>
+  <Description DefaultValue="Advanced worksheet management and image tools for Excel workbooks."/>
+  <IconUrl DefaultValue="https://localhost:3000/assets/settings.png"/>
+  <HighResolutionIconUrl DefaultValue="https://localhost:3000/assets/settings.png"/>
+  <SupportUrl DefaultValue="https://localhost:3000/"/>
   <AppDomains>
     <AppDomain>https://www.contoso.com</AppDomain>
   </AppDomains>
@@ -65,9 +65,9 @@
     </Hosts>
     <Resources>
       <bt:Images>
-        <bt:Image id="Icon.16x16" DefaultValue="https://localhost:3000/assets/icon-16.png"/>
-        <bt:Image id="Icon.32x32" DefaultValue="https://localhost:3000/assets/icon-32.png"/>
-        <bt:Image id="Icon.80x80" DefaultValue="https://localhost:3000/assets/icon-80.png"/>
+        <bt:Image id="Icon.16x16" DefaultValue="https://localhost:3000/assets/settings.png"/>
+        <bt:Image id="Icon.32x32" DefaultValue="https://localhost:3000/assets/settings.png"/>
+        <bt:Image id="Icon.80x80" DefaultValue="https://localhost:3000/assets/settings.png"/>
       </bt:Images>
       <bt:Urls>
         <bt:Url id="GetStarted.LearnMoreUrl" DefaultValue="https://go.microsoft.com/fwlink/?LinkId=276812" />
@@ -75,13 +75,13 @@
         <bt:Url id="Taskpane.Url" DefaultValue="https://localhost:3000/taskpane.html" />
       </bt:Urls>
       <bt:ShortStrings>
-        <bt:String id="GetStarted.Title" DefaultValue="Get started with Worksheet Tools!" />
-        <bt:String id="CommandsGroup.Label" DefaultValue="Worksheet Tools" />
-        <bt:String id="TaskpaneButton.Label" DefaultValue="Worksheet Tools" />
+        <bt:String id="GetStarted.Title" DefaultValue="Get started with Excel Custom Add-in!" />
+        <bt:String id="CommandsGroup.Label" DefaultValue="Custom Tools" />
+        <bt:String id="TaskpaneButton.Label" DefaultValue="Custom Tools" />
       </bt:ShortStrings>
       <bt:LongStrings>
-        <bt:String id="GetStarted.Description" DefaultValue="Your worksheet tools add-in loaded successfully. Go to the HOME tab and click the 'Show Worksheet Tools' button to get started." />
-        <bt:String id="TaskpaneButton.Tooltip" DefaultValue="Click to Show Worksheet Tools" />
+        <bt:String id="GetStarted.Description" DefaultValue="Your Excel Custom Add-in loaded successfully. Go to the HOME tab and click the 'Show Custom Tools' button to get started." />
+        <bt:String id="TaskpaneButton.Tooltip" DefaultValue="Click to Show Custom Tools" />
       </bt:LongStrings>
     </Resources>
   </VersionOverrides>

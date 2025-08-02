@@ -1,143 +1,87 @@
 {
-    "$schema": "https://developer.microsoft.com/json-schemas/teams/v1.17/MicrosoftTeams.schema.json",
-    "id": "f2b103f1-1ab1-4e1b-8f0b-072aa3d4e19d",
-    "manifestVersion": "1.17",
-    "version": "1.0.0",
-    "name": {
-      "short": "Contoso Task Pane Add-in",
-      "full": "Contoso Task Pane Add-in"
-    },
-    "description": {
-      "short": "A template to get started.",
-      "full": "This is the template to get started."
-    },
-    "developer": {
-      "name": "Contoso",
-      "websiteUrl": "https://www.contoso.com",
-      "privacyUrl": "https://www.contoso.com/privacy",
-      "termsOfUseUrl": "https://www.contoso.com/servicesagreement"
-    },
-    "icons": {
-      "outline": "assets/outline.png",
-      "color": "assets/color.png"
-    },
-    "accentColor": "#230201",
-    "localizationInfo": {
-      "defaultLanguageTag": "en-us",
-      "additionalLanguages": []
-    },
-    "authorization": {
-      "permissions": {
-        "resourceSpecific": [
-          {
-            "name": "Mailbox.ReadWrite.User",
-            "type": "Delegated"
-          }
-        ]
-      }
-    },
-    "validDomains": ["contoso.com"],
-    "extensions": [
-      {
-        "requirements": {
-          "scopes": ["mail"],
-          "capabilities": [
-            { "name": "Mailbox", "minVersion": "1.3" }
-          ]
-        },
-        "runtimes": [
-          {
-            "requirements": {
-              "capabilities": [
-                { "name": "Mailbox", "minVersion": "1.3" }
-              ]
+  "$schema": "https://developer.microsoft.com/json-schemas/office-js/add-in-manifest.schema.json",
+  "id": "f2b103f1-1ab1-4e1b-8f0b-072aa3d4e19d",
+  "version": "1.0.0.0",
+  "providerName": "Excel Custom Add-in",
+  "defaultLocale": "en-US",
+  "displayName": {
+    "default": "Excel Custom Add-in"
+  },
+  "description": {
+    "default": "Excel add-in for worksheet tools and image management"
+  },
+  "iconUrl": "https://localhost:3000/assets/icon-32.png",
+  "highResolutionIconUrl": "https://localhost:3000/assets/icon-64.png",
+  "supportUrl": "https://localhost:3000",
+  "hosts": [
+    {
+      "name": "Workbook"
+    }
+  ],
+  "requirements": [
+    {
+      "name": "SharedRuntime",
+      "minVersion": "1.1"
+    }
+  ],
+  "defaultSettings": {
+    "sourceLocation": "https://localhost:3000/taskpane.html",
+    "requestedHeight": 250,
+    "requestedWidth": 320
+  },
+  "permissions": "ReadWriteDocument",
+  "ribbons": [
+    {
+      "id": "ContextMenuCell",
+      "controls": [
+        {
+          "id": "MyButton",
+          "type": "button",
+          "label": "My Add-in",
+          "icons": [
+            {
+              "size": 16,
+              "sourceLocation": "https://localhost:3000/assets/icon-16.png"
             },
-            "id": "TaskPaneRuntime",
-            "type": "general",
-            "code": {
-              "page": "https://localhost:3000/taskpane.html"
+            {
+              "size": 32,
+              "sourceLocation": "https://localhost:3000/assets/icon-32.png"
             },
-            "lifetime": "short",
-            "actions": [
-              {
-                "id": "TaskPaneRuntimeShow",
-                "type":"openPage",
-                "pinnable": false,
-                "view": "dashboard"
-              }
-            ]
+            {
+              "size": 80,
+              "sourceLocation": "https://localhost:3000/assets/icon-80.png"
+            }
+          ],
+          "supertip": {
+            "title": "Excel Custom Add-in",
+            "description": "Open Excel worksheet tools"
           },
-          {
-            "id": "CommandsRuntime",
-            "type": "general",
-            "code": {
-              "page": "https://localhost:3000/commands.html",
-              "script": "https://localhost:3000/commands.js"
-            },
-            "lifetime": "short",
-            "actions": [
-              {
-                "id": "action",
-                "type": "executeFunction"
-              }
-            ]
-          }
-        ],
-        "ribbons": [
-          {
-            "contexts": [
-              "mailCompose"
-            ],
-            "tabs": [
-              {
-                "builtInTabId": "TabDefault",
-                "groups": [
-                  {
-                    "id": "msgComposeGroup",
-                    "label": "Contoso Add-in",
-                    "icons": [
-                      { "size": 16, "url": "https://localhost:3000/assets/icon-16.png" },
-                      { "size": 32, "url": "https://localhost:3000/assets/icon-32.png" },
-                      { "size": 80, "url": "https://localhost:3000/assets/icon-80.png" }
-                    ],
-                    "controls": [
-                      {
-                        "id": "msgComposeOpenPaneButton",
-                        "type": "button",
-                        "label": "Show Task Pane",
-                        "icons": [
-                          { "size": 16, "url": "https://localhost:3000/assets/icon-16.png" },
-                          { "size": 32, "url": "https://localhost:3000/assets/icon-32.png" },
-                          { "size": 80, "url": "https://localhost:3000/assets/icon-80.png" }
-                        ],
-                        "supertip": {
-                          "title": "Show Task Pane",
-                          "description": "Opens a task pane."
-                        },
-                        "actionId": "TaskPaneRuntimeShow"
-                      },
-                      {
-                        "id": "ActionButton",
-                        "type": "button",
-                        "label": "Perform an action",
-                        "icons": [
-                          { "size": 16, "url": "https://localhost:3000/assets/icon-16.png" },
-                          { "size": 32, "url": "https://localhost:3000/assets/icon-32.png" },
-                          { "size": 80, "url": "https://localhost:3000/assets/icon-80.png" }
-                        ],
-                        "supertip": {
-                          "title": "Perform an action",
-                          "description": "Perform an action when clicked."
-                        },
-                        "actionId": "action"
-                      }
-                    ]
-                  }
-                ]
-              }
-            ]
-          }
-        ]
-      }
-    ]
-  }
+          "actionId": "ShowTaskpane"
+        }
+      ]
+    }
+  ],
+  "actions": [
+    {
+      "id": "ShowTaskpane",
+      "type": "ShowTaskpane",
+      "sourceLocation": "https://localhost:3000/taskpane.html"
+    }
+  ],
+  "runtimes": [
+    {
+      "id": "ContosoAddin.Url",
+      "type": "general",
+      "code": {
+        "page": "https://localhost:3000/taskpane.html"
+      },
+      "lifetime": "long",
+      "actions": [
+        {
+          "id": "ShowTaskpane",
+          "type": "ShowTaskpane"
+        }
+      ]
+    }
+  ]
+}

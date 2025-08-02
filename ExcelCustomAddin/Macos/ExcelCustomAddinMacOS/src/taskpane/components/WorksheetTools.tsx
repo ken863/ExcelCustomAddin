@@ -160,9 +160,18 @@ const WorksheetTools: React.FC = () => {
         const unregisterActivated = EventHandlers.registerSheetActivatedHandler(refreshSheetList);
         const unregisterAdded = EventHandlers.registerSheetAddedHandler(refreshSheetList);
         const unregisterDeleted = EventHandlers.registerSheetDeletedHandler(refreshSheetList);
+        
+        // Đăng ký workbook closed handler để clear storage
+        const unregisterClosed = EventHandlers.registerWorkbookClosedHandler((workbookName) => {
+          console.log(`Cleared pinned sheets storage for workbook: ${workbookName}`);
+          setMessage(`Cleared pinned sheets for: ${workbookName}`);
+        });
 
         // Khởi tạo Excel events
         await EventHandlers.initializeExcelEvents();
+        
+        // Khởi tạo workbook monitoring
+        EventHandlers.initializeWorkbookMonitoring();
 
         // Auto-refresh fallback mỗi 5 giây
         EventHandlers.startPollingFallback(5000);
@@ -172,6 +181,7 @@ const WorksheetTools: React.FC = () => {
           unregisterActivated();
           unregisterAdded();
           unregisterDeleted();
+          unregisterClosed();
           EventHandlers.cleanup();
         };
       } catch (error) {

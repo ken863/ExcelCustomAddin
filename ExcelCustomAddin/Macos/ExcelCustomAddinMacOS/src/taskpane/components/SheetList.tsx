@@ -232,7 +232,7 @@ const SheetList: React.FC<SheetListProps> = ({
                 <div className={styles.sheetInfo}>
                   <Text className={styles.sheetName}>
                     {sheet.name}
-                    {sheet.isPinned && " 📌"}
+                    {sheet.isPinned}
                   </Text>
                 </div>
                 
