@@ -43,37 +43,40 @@ const useStyles = makeStyles({
   container: {
     display: "flex",
     flexDirection: "column",
-    gap: tokens.spacingVerticalS, // Giảm từ M xuống S
-    padding: tokens.spacingVerticalS, // Giảm từ M xuống S
+    height: "100vh", // Chiếm toàn bộ chiều cao viewport
+    gap: tokens.spacingVerticalS,
+    padding: tokens.spacingVerticalS,
+    overflow: "hidden", // Prevent container from scrolling
   },
   toolSection: {
     display: "flex",
     flexDirection: "column",
-    gap: tokens.spacingVerticalXS, // Giảm từ S xuống XS
+    gap: tokens.spacingVerticalXS,
   },
   buttonRow: {
     display: "flex",
-    gap: tokens.spacingHorizontalXS, // Giảm từ S xuống XS
+    gap: tokens.spacingHorizontalXS,
     flexWrap: "wrap",
   },
   pathDisplay: {
     backgroundColor: tokens.colorNeutralBackground2,
-    padding: tokens.spacingVerticalXXS, // Giảm từ XS xuống XXS
+    padding: tokens.spacingVerticalXXS,
     borderRadius: tokens.borderRadiusSmall,
-    fontSize: tokens.fontSizeBase200, // Giảm font size
+    fontSize: tokens.fontSizeBase200,
     color: tokens.colorNeutralForeground2,
     wordBreak: "break-all",
   },
   inputGroup: {
     display: "flex",
     flexDirection: "column",
-    gap: tokens.spacingVerticalXXS, // Giảm từ XS xuống XXS
+    gap: tokens.spacingVerticalXXS,
   },
   numberInput: {
     width: "100px",
   },
   compactCard: {
-    padding: tokens.spacingVerticalXS, // Giảm padding cho cards
+    padding: tokens.spacingVerticalXS,
+    flexShrink: 0, // Prevent cards from shrinking
   },
   compactCardHeader: {
     marginBottom: tokens.spacingVerticalXXS,
@@ -88,6 +91,15 @@ const useStyles = makeStyles({
     display: "flex",
     alignItems: "center",
     gap: tokens.spacingHorizontalXS,
+  },
+  sheetListContainer: {
+    flex: 1, // Chiếm toàn bộ không gian còn lại
+    minHeight: 0, // Cho phép shrink xuống dưới content size
+    display: "flex",
+    flexDirection: "column",
+  },
+  fixedSection: {
+    flexShrink: 0, // Prevent fixed sections from shrinking
   },
 });
 
@@ -400,47 +412,43 @@ const WorksheetTools: React.FC = () => {
 
   return (
     <div className={styles.container}>
-      {/* Message Bar */}
+      {/* Message Bar - Fixed */}
       {message && (
-        <MessageBar>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
-            <Text size={200}>{message}</Text>
-            <Button
-              appearance="transparent"
-              size="small"
-              onClick={() => setMessage("")}
-            >
-              ✕
-            </Button>
-          </div>
-        </MessageBar>
+        <div className={styles.fixedSection}>
+          <MessageBar>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+              <Text size={200}>{message}</Text>
+              <Button
+                appearance="transparent"
+                size="small"
+                onClick={() => setMessage("")}
+              >
+                ✕
+              </Button>
+            </div>
+          </MessageBar>
+        </div>
       )}
 
-      <Divider />
-
-      {/* Sheet List */}
-      <SheetList 
-        sheets={sheets}
-        selectedSheet={selectedSheet}
-        onSheetSelect={handleSheetSelect}
-        onTogglePin={togglePinSheet}
-        onRefresh={refreshSheetList}
-        onRenameSheet={changeSheetName}
-      />
+      <div className={styles.fixedSection}>
+        <Divider />
+      </div>
       
-      {/* Copy File Path Button */}
-      <Button 
-        size="small"
-        icon={<Copy24Regular />}
-        onClick={copyFilePath}
-        appearance="subtle"
-        style={{ width: '100%' }}
-      >
-        <Text size={200}>Copy file path</Text>
-      </Button>
+      {/* Copy File Path Button - Fixed */}
+      <div className={styles.fixedSection}>
+        <Button 
+          size="small"
+          icon={<Copy24Regular />}
+          onClick={copyFilePath}
+          appearance="subtle"
+          style={{ width: '100%' }}
+        >
+          <Text size={200}>Copy file path</Text>
+        </Button>
+      </div>
 
-      {/* Main Tools - Compact */}
-      <Card className={styles.compactCard}>
+      {/* Main Tools - Fixed */}
+      <Card className={`${styles.compactCard} ${styles.fixedSection}`}>
         <CardHeader
           className={styles.compactCardHeader}
           header={<Text weight="semibold" size={200}>Worksheet Tools</Text>}
@@ -468,8 +476,8 @@ const WorksheetTools: React.FC = () => {
         </div>
       </Card>
 
-      {/* Image Tools - Compact */}
-      <Card className={styles.compactCard}>
+      {/* Image Tools - Fixed */}
+      <Card className={`${styles.compactCard} ${styles.fixedSection}`}>
         <CardHeader
           className={styles.compactCardHeader}
           header={<Text weight="semibold" size={200}>Image Tools</Text>}
@@ -504,6 +512,18 @@ const WorksheetTools: React.FC = () => {
           </div>
         </div>
       </Card>
+
+      {/* Sheet List - Flexible */}
+      <div className={styles.sheetListContainer}>
+        <SheetList 
+          sheets={sheets}
+          selectedSheet={selectedSheet}
+          onSheetSelect={handleSheetSelect}
+          onTogglePin={togglePinSheet}
+          onRefresh={refreshSheetList}
+          onRenameSheet={changeSheetName}
+        />
+      </div>
 
       {/* Rename Sheet Dialog */}
       <Dialog open={renameDialogOpen} onOpenChange={(_, data) => setRenameDialogOpen(data.open)}>

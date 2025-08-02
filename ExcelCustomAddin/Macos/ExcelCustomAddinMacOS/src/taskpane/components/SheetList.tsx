@@ -22,6 +22,7 @@ const useStyles = makeStyles({
   container: {
     display: "flex",
     flexDirection: "column",
+    height: "100%", // Chiếm toàn bộ chiều cao của container cha
     gap: tokens.spacingVerticalXS,
   },
   header: {
@@ -32,6 +33,7 @@ const useStyles = makeStyles({
     backgroundColor: tokens.colorNeutralBackground2,
     borderRadius: tokens.borderRadiusSmall,
     marginBottom: tokens.spacingVerticalXS,
+    flexShrink: 0, // Prevent header from shrinking
   },
   headerActions: {
     display: "flex",
@@ -39,11 +41,12 @@ const useStyles = makeStyles({
     gap: tokens.spacingHorizontalXS,
   },
   listContainer: {
-    maxHeight: "400px", // Tăng từ 300px
-    overflowY: "auto",
+    flex: 1, // Chiếm toàn bộ không gian còn lại
+    overflowY: "auto", // Enable scrolling khi cần
     border: `1px solid ${tokens.colorNeutralStroke2}`,
     borderRadius: tokens.borderRadiusSmall,
-    padding: tokens.spacingVerticalXXS, // Thêm padding để item không bị sát viền
+    padding: tokens.spacingVerticalXXS,
+    minHeight: 0, // Cho phép shrink
   },
   sheetItem: {
     display: "flex",

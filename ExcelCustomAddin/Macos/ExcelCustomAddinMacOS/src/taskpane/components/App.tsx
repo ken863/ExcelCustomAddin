@@ -8,7 +8,9 @@ interface AppProps {
 
 const useStyles = makeStyles({
   root: {
-    minHeight: "100vh",
+    height: "100vh", // Chiếm toàn bộ chiều cao viewport
+    display: "flex",
+    flexDirection: "column",
   },
 });
 
