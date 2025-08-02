@@ -10,29 +10,22 @@ import {
   SpinButton,
   Divider,
   tokens,
-  Select,
-  SelectOnChangeData,
-  OptionOnSelectData,
-  Option,
   Dialog,
-  DialogTrigger,
   DialogSurface,
   DialogTitle,
   DialogContent,
   DialogActions,
   DialogBody,
   MessageBar,
+  Checkbox,
 } from "@fluentui/react-components";
 import {
   DocumentAdd24Regular,
-  Settings24Regular,
   Image24Regular,
-  Pin24Regular,
   DocumentBulletListMultiple24Regular,
   Copy24Regular,
 } from "@fluentui/react-icons";
 import SheetList from "./SheetList";
-import WorkbookInfo from "./WorkbookInfo";
 import StorageService from "../services/StorageService";
 import ExcelUtils, { SheetInfo } from "../utils/ExcelUtils";
 import WorksheetOperations from "../utils/WorksheetOperations";
@@ -107,12 +100,13 @@ const WorksheetTools: React.FC = () => {
   const styles = useStyles();
   const [currentWorkbookPath, setCurrentWorkbookPath] = React.useState<string>("");
   const [scalePercent, setScalePercent] = React.useState<number>(85);
+  const [allowReimport, setAllowReimport] = React.useState<boolean>(false);
   const [sheets, setSheets] = React.useState<SheetInfo[]>([]);
   const [selectedSheet, setSelectedSheet] = React.useState<string>("");
   const [isLoading, setIsLoading] = React.useState<boolean>(false);
   const [lastRefresh, setLastRefresh] = React.useState<Date>(new Date());
   const [message, setMessage] = React.useState<string>("");
-  
+
   // Rename dialog state
   const [renameDialogOpen, setRenameDialogOpen] = React.useState<boolean>(false);
   const [newSheetName, setNewSheetName] = React.useState<string>("");
@@ -122,16 +116,20 @@ const WorksheetTools: React.FC = () => {
     StorageService.saveScalePercent(scalePercent);
   }, [scalePercent]);
 
+  React.useEffect(() => {
+    StorageService.setAllowReimport(allowReimport);
+  }, [allowReimport]);
+
   // Auto-hide message sau 3 giây
   React.useEffect(() => {
     if (message) {
       const timer = setTimeout(() => {
         setMessage("");
-      }, 1000);
-      
+      }, 3000);
+
       return () => clearTimeout(timer);
     }
-    
+
     return undefined;
   }, [message]);
 
@@ -158,11 +156,12 @@ const WorksheetTools: React.FC = () => {
     };
   }, []);
 
-    // Khởi tạo và lấy danh sách sheets
+  // Khởi tạo và lấy danh sách sheets
   React.useEffect(() => {
     // Load saved settings from storage
     setScalePercent(StorageService.getScalePercent());
-    
+    setAllowReimport(StorageService.getAllowReimport());
+
     refreshWorkbookInfo();
     refreshSheetList();
 
@@ -173,7 +172,7 @@ const WorksheetTools: React.FC = () => {
         const unregisterActivated = EventHandlers.registerSheetActivatedHandler(refreshSheetList);
         const unregisterAdded = EventHandlers.registerSheetAddedHandler(refreshSheetList);
         const unregisterDeleted = EventHandlers.registerSheetDeletedHandler(refreshSheetList);
-        
+
         // Đăng ký workbook closed handler để clear storage
         const unregisterClosed = EventHandlers.registerWorkbookClosedHandler((workbookName) => {
           console.log(`Cleared pinned sheets storage for workbook: ${workbookName}`);
@@ -182,7 +181,7 @@ const WorksheetTools: React.FC = () => {
 
         // Khởi tạo Excel events
         await EventHandlers.initializeExcelEvents();
-        
+
         // Khởi tạo workbook monitoring
         EventHandlers.initializeWorkbookMonitoring();
 
@@ -201,7 +200,7 @@ const WorksheetTools: React.FC = () => {
         console.error("Error initializing events:", error);
         // Fallback to polling only
         EventHandlers.startPollingFallback(5000);
-        
+
         return () => {
           EventHandlers.cleanup();
         };
@@ -235,7 +234,7 @@ const WorksheetTools: React.FC = () => {
   const refreshSheetList = async () => {
     try {
       const sheetData = await ExcelUtils.getWorksheetList();
-      
+
       // Cập nhật pin status cho mỗi sheet
       const sheetList: SheetInfo[] = sheetData.worksheets.map(sheet => ({
         ...sheet,
@@ -261,10 +260,10 @@ const WorksheetTools: React.FC = () => {
   const createEvidenceSheet = async () => {
     if (isLoading) return;
     setIsLoading(true);
-    
+
     try {
       const result = await WorksheetOperations.createEvidenceSheet();
-      
+
       if (result.success) {
         setMessage(result.message);
         refreshSheetList();
@@ -283,10 +282,10 @@ const WorksheetTools: React.FC = () => {
   const formatDocument = async () => {
     if (isLoading) return;
     setIsLoading(true);
-    
+
     try {
       const result = await WorksheetOperations.formatDocument();
-      
+
       if (result.success) {
         alert(result.message);
       } else {
@@ -303,7 +302,7 @@ const WorksheetTools: React.FC = () => {
   // Change Sheet Name với dialog thay vì prompt
   const changeSheetName = (sheetNameOrEvent?: string | React.MouseEvent) => {
     let targetSheet: string;
-    
+
     if (typeof sheetNameOrEvent === 'string') {
       // Called from context menu with sheet name
       targetSheet = sheetNameOrEvent;
@@ -311,7 +310,7 @@ const WorksheetTools: React.FC = () => {
       // Called from button click, use selectedSheet
       targetSheet = selectedSheet;
     }
-    
+
     if (!targetSheet) {
       setMessage("Vui lòng chọn một sheet từ danh sách để đổi tên.");
       return;
@@ -341,7 +340,7 @@ const WorksheetTools: React.FC = () => {
       setIsLoading(true);
 
       const result = await WorksheetOperations.renameWorksheet(selectedSheet, newSheetName);
-      
+
       if (result.success) {
         setMessage(result.message);
         refreshSheetList();
@@ -367,39 +366,36 @@ const WorksheetTools: React.FC = () => {
     try {
       const result = await ImageUtils.importImagesFromFolder();
       
-      if (result.success) {
-        alert(result.message);
-      } else {
-        alert(result.message);
+      // Sử dụng setMessage thay vì alert
+      if (result.message) {
+        setMessage(result.message);
       }
     } catch (error) {
       console.error("Error inserting images:", error);
-      alert(`Có lỗi xảy ra: ${error.message}`);
+      setMessage(`Có lỗi xảy ra: ${error.message}`);
     } finally {
       setIsLoading(false);
     }
-  };
-
-  // Pin/Unpin Sheet - sử dụng StorageService
+  };  // Pin/Unpin Sheet - sử dụng StorageService
   const togglePinSheet = async (sheetName: string) => {
     try {
       await Excel.run(async (context) => {
         const workbook = context.workbook;
         workbook.load("name");
         await context.sync();
-        
+
         const workbookName = workbook.name;
         const isPinned = StorageService.togglePinSheet(workbookName, sheetName);
-        
+
         // Cập nhật state local
-        setSheets(prevSheets => 
-          prevSheets.map(sheet => 
-            sheet.name === sheetName 
+        setSheets(prevSheets =>
+          prevSheets.map(sheet =>
+            sheet.name === sheetName
               ? { ...sheet, isPinned }
               : sheet
           )
         );
-        
+
         // Refresh để sắp xếp lại danh sách
         setTimeout(() => refreshSheetList(), 100);
       });
@@ -408,10 +404,10 @@ const WorksheetTools: React.FC = () => {
     }
   };
 
-    // Sheet selection handler
+  // Sheet selection handler
   const handleSheetSelect = async (sheetName: string) => {
     setSelectedSheet(sheetName);
-    
+
     try {
       await ExcelUtils.activateWorksheet(sheetName);
     } catch (error) {
@@ -439,12 +435,19 @@ const WorksheetTools: React.FC = () => {
       {message && (
         <div className={styles.fixedSection}>
           <MessageBar>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
-              <Text size={200}>{message}</Text>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', width: '100%' }}>
+              <div style={{ flex: 1 }}>
+                {message.split('\n').map((line, index) => (
+                  <div key={index}>
+                    <Text size={200}>{line}</Text>
+                  </div>
+                ))}
+              </div>
               <Button
                 appearance="transparent"
                 size="small"
                 onClick={() => setMessage("")}
+                style={{ marginLeft: '8px' }}
               >
                 ✕
               </Button>
@@ -452,15 +455,15 @@ const WorksheetTools: React.FC = () => {
           </MessageBar>
         </div>
       )}
-      
+
       {/* Copy File Path Button - Fixed */}
       <div className={styles.fixedSection}>
-        <Button 
+        <Button
           size="small"
           icon={<Copy24Regular />}
           onClick={copyFilePath}
           appearance="subtle"
-          style={{ 
+          style={{
             width: '100%',
             border: `1px solid ${tokens.colorNeutralStroke1}`,
             borderRadius: tokens.borderRadiusSmall
@@ -482,7 +485,7 @@ const WorksheetTools: React.FC = () => {
         />
         <div className={styles.toolSection}>
           <div className={styles.buttonRow}>
-            <Button 
+            <Button
               size="small"
               icon={<DocumentAdd24Regular />}
               onClick={createEvidenceSheet}
@@ -491,7 +494,7 @@ const WorksheetTools: React.FC = () => {
             >
               {isLoading ? "Creating..." : "Create Evidence"}
             </Button>
-            <Button 
+            <Button
               size="small"
               icon={<DocumentBulletListMultiple24Regular />}
               onClick={formatDocument}
@@ -527,7 +530,7 @@ const WorksheetTools: React.FC = () => {
               />
             </div>
 
-            <Button 
+            <Button
               size="small"
               icon={<Image24Regular />}
               onClick={insertMultipleImages}
@@ -537,12 +540,20 @@ const WorksheetTools: React.FC = () => {
               {isLoading ? "Đang import..." : "Import Images"}
             </Button>
           </div>
+
+          <div className={styles.horizontalGroup}>
+            <Checkbox
+              checked={allowReimport}
+              onChange={(_, data) => setAllowReimport(data.checked === true)}
+              label={<Text size={200}>Allow reimport</Text>}
+            />
+          </div>
         </div>
       </Card>
 
       {/* Sheet List - Flexible */}
       <div className={styles.sheetListContainer}>
-        <SheetList 
+        <SheetList
           sheets={sheets}
           selectedSheet={selectedSheet}
           onSheetSelect={handleSheetSelect}
@@ -575,15 +586,15 @@ const WorksheetTools: React.FC = () => {
               </div>
             </DialogContent>
             <DialogActions>
-              <Button 
-                appearance="secondary" 
+              <Button
+                appearance="secondary"
                 onClick={() => setRenameDialogOpen(false)}
                 disabled={isLoading}
               >
                 Hủy
               </Button>
-              <Button 
-                appearance="primary" 
+              <Button
+                appearance="primary"
                 onClick={handleRenameConfirm}
                 disabled={isLoading || !newSheetName.trim()}
               >

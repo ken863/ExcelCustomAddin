@@ -29,10 +29,10 @@ const useStyles = makeStyles({
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
-    padding: `${tokens.spacingVerticalXS} ${tokens.spacingHorizontalXS}`,
+    padding: `${tokens.spacingVerticalXXS} ${tokens.spacingHorizontalXS}`, // Giảm padding
     backgroundColor: tokens.colorNeutralBackground2,
     borderRadius: tokens.borderRadiusSmall,
-    marginBottom: tokens.spacingVerticalXS,
+    marginBottom: tokens.spacingVerticalXXS,
     flexShrink: 0, // Prevent header from shrinking
   },
   headerActions: {
@@ -45,19 +45,19 @@ const useStyles = makeStyles({
     overflowY: "auto", // Enable scrolling khi cần
     border: `1px solid ${tokens.colorNeutralStroke2}`,
     borderRadius: tokens.borderRadiusSmall,
-    padding: tokens.spacingVerticalXXS,
+    padding: "2px", // Giảm padding
     minHeight: 0, // Cho phép shrink
   },
   sheetItem: {
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
-    padding: `${tokens.spacingVerticalXS} ${tokens.spacingHorizontalS}`, // Tăng padding cho rõ ràng hơn
-    margin: `${tokens.spacingVerticalXXS} ${tokens.spacingHorizontalXXS}`, // Thêm margin để tạo khoảng cách
-    borderRadius: tokens.borderRadiusSmall, // Thêm border radius cho đẹp
+    padding: `${tokens.spacingVerticalXXS} ${tokens.spacingHorizontalXS}`, // Giảm padding
+    margin: `1px ${tokens.spacingHorizontalXXS}`, // Giảm margin
+    borderRadius: tokens.borderRadiusSmall, // Border radius
     cursor: "pointer",
-    minHeight: "25px", // Tăng height để phù hợp với padding
-    transition: "background-color 0.2s ease", // Smooth transition
+    minHeight: "18px", // Giảm height
+    transition: "background-color 0.2s ease",
     ":hover": {
       backgroundColor: tokens.colorNeutralBackground1Hover,
     },
@@ -71,20 +71,20 @@ const useStyles = makeStyles({
   sheetInfo: {
     display: "flex",
     alignItems: "center",
-    gap: tokens.spacingHorizontalXXS, // Giảm gap
+    gap: tokens.spacingHorizontalXXS, // Giữ gap nhỏ
     flex: 1,
   },
   sheetName: {
     flex: 1,
     textAlign: "left",
-    fontSize: tokens.fontSizeBase200, // Giảm font size
-    lineHeight: "1.2",
+    fontSize: tokens.fontSizeBase200, // Giảm font size nhỏ hơn
+    lineHeight: "1.1", // Giảm line height
   },
   pinButton: {
     minWidth: "auto",
-    padding: tokens.spacingVerticalXXS,
-    width: "24px", // Fixed width
-    height: "24px",
+    padding: "2px", // Giảm padding
+    width: "18px", // Giảm width
+    height: "18px", // Giảm height
   },
 });
 
@@ -194,7 +194,7 @@ const SheetList: React.FC<SheetListProps> = ({
       {/* Compact Header */}
       <div className={styles.header}>
         <div className={styles.headerActions}>
-          <Text weight="semibold" size={200}>
+          <Text weight="semibold" size={100}>
             Worksheets ({sheets.length})
           </Text>
           <Button

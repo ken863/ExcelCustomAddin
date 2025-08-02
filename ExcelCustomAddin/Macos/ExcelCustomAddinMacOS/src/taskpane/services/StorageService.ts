@@ -10,6 +10,8 @@ interface PinnedSheetsData {
 class StorageService {
   private static readonly PINNED_SHEETS_KEY = "ExcelAddin_PinnedSheets";
   private static readonly SCALE_PERCENT_KEY = "ExcelAddin_ScalePercent";
+  private static readonly IMPORTED_FILES_KEY = "ExcelAddin_ImportedFiles";
+  private static readonly ALLOW_REIMPORT_KEY = "ExcelAddin_AllowReimport";
 
   /**
    * Lấy danh sách sheets được pin cho workbook
@@ -106,6 +108,83 @@ class StorageService {
     } catch (error) {
       console.error("Error getting scale percent:", error);
       return 85;
+    }
+  }
+
+  /**
+   * Lưu thông tin file đã được import
+   */
+  static addImportedFile(workbookName: string, fileName: string, fileSize: number): void {
+    try {
+      const key = `${this.IMPORTED_FILES_KEY}_${workbookName}`;
+      const data = localStorage.getItem(key);
+      const importedFiles = data ? JSON.parse(data) : {};
+      
+      // Tạo key unique dựa trên tên file và size
+      const fileKey = `${fileName}_${fileSize}`;
+      importedFiles[fileKey] = {
+        fileName,
+        fileSize,
+        importedAt: new Date().toISOString()
+      };
+      
+      localStorage.setItem(key, JSON.stringify(importedFiles));
+    } catch (error) {
+      console.error("Error adding imported file:", error);
+    }
+  }
+
+  /**
+   * Kiểm tra file đã được import chưa
+   */
+  static isFileImported(workbookName: string, fileName: string, fileSize: number): boolean {
+    try {
+      const key = `${this.IMPORTED_FILES_KEY}_${workbookName}`;
+      const data = localStorage.getItem(key);
+      if (!data) return false;
+      
+      const importedFiles = JSON.parse(data);
+      const fileKey = `${fileName}_${fileSize}`;
+      return fileKey in importedFiles;
+    } catch (error) {
+      console.error("Error checking imported file:", error);
+      return false;
+    }
+  }
+
+  /**
+   * Xóa danh sách file đã import của workbook
+   */
+  static clearImportedFiles(workbookName: string): void {
+    try {
+      const key = `${this.IMPORTED_FILES_KEY}_${workbookName}`;
+      localStorage.removeItem(key);
+    } catch (error) {
+      console.error("Error clearing imported files:", error);
+    }
+  }
+
+  /**
+   * Lưu setting cho phép import lại file
+   */
+  static setAllowReimport(allow: boolean): void {
+    try {
+      localStorage.setItem(this.ALLOW_REIMPORT_KEY, allow.toString());
+    } catch (error) {
+      console.error("Error saving allow reimport setting:", error);
+    }
+  }
+
+  /**
+   * Lấy setting cho phép import lại file
+   */
+  static getAllowReimport(): boolean {
+    try {
+      const value = localStorage.getItem(this.ALLOW_REIMPORT_KEY);
+      return value ? value === 'true' : false;
+    } catch (error) {
+      console.error("Error getting allow reimport setting:", error);
+      return false;
     }
   }
 }

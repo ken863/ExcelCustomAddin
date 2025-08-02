@@ -105,6 +105,7 @@ export class ImageUtils {
         
         fileInput.onchange = async (event) => {
           const files = (event.target as HTMLInputElement).files;
+          
           if (!files || files.length === 0) {
             resolve({
               success: false,
@@ -165,10 +166,13 @@ export class ImageUtils {
 
       const scalePercent = StorageService.getScalePercent();
       const scale = scalePercent / 100;
+      const allowReimport = StorageService.getAllowReimport();
 
       return await Excel.run(async (context) => {
         const worksheet = context.workbook.worksheets.getActiveWorksheet();
+        const workbook = context.workbook;
         worksheet.load("name");
+        workbook.load("name");
         
         // Lấy thông tin về ô hiện tại để làm điểm bắt đầu
         const selectedRange = context.workbook.getSelectedRange();
@@ -176,15 +180,36 @@ export class ImageUtils {
         
         await context.sync();
 
+        const workbookName = workbook.name;
         let currentRow = selectedRange.rowIndex;
         let currentCol = selectedRange.columnIndex;
         let currentVerticalOffset = 0; // Track vertical offset from starting position
+        let importedCount = 0;
+        let skippedCount = 0;
+        let reimportedCount = 0;
+        const skippedFiles: string[] = [];
+        const reimportedFiles: string[] = [];
 
         // Xử lý từng file
         for (let i = 0; i < imageFiles.length; i++) {
           const file = imageFiles[i];
           
           try {
+            // Kiểm tra file đã được import chưa
+            const isAlreadyImported = StorageService.isFileImported(workbookName, file.name, file.size);
+            
+            if (isAlreadyImported && !allowReimport) {
+              skippedCount++;
+              skippedFiles.push(file.name);
+              continue;
+            }
+            
+            // Đánh dấu nếu là file import lại
+            if (isAlreadyImported && allowReimport) {
+              reimportedCount++;
+              reimportedFiles.push(file.name);
+            }
+            
             // Chuyển file thành base64
             const base64 = await this.fileToBase64(file);
             const base64Data = base64.split(',')[1]; // Remove data:image/...;base64, prefix
@@ -213,12 +238,16 @@ export class ImageUtils {
             image.top = targetCell.top + currentVerticalOffset;
             
             // Cập nhật tên hình ảnh
-            image.name = `Image_${i + 1}_${file.name}`;
+            image.name = `Image_${importedCount + 1}_${file.name}`;
             
             await context.sync();
             
+            // Lưu thông tin file đã import
+            StorageService.addImportedFile(workbookName, file.name, file.size);
+            
             // Di chuyển đến vị trí tiếp theo (xuống dưới)
             currentVerticalOffset += scaledHeight + 10; // Add 10px spacing between images
+            importedCount++;
             
           } catch (fileError) {
             console.error(`Error processing file ${file.name}:`, fileError);
@@ -226,9 +255,36 @@ export class ImageUtils {
           }
         }
 
+        let message = "";
+        
+        if (importedCount > 0) {
+          message = `Đã chèn ${importedCount} hình ảnh thành công với scale ${scalePercent}%!`;
+        }
+        
+        if (reimportedCount > 0) {
+          if (message) message += "\n\n";
+          message += `${reimportedCount} file đã được import lại:`;
+          reimportedFiles.forEach(fileName => {
+            message += `\n• ${fileName}`;
+          });
+        }
+        
+        if (skippedCount > 0) {
+          if (message) message += "\n\n";
+          message += `${skippedCount} file đã bị bỏ qua vì đã được import trước đó:`;
+          skippedFiles.forEach(fileName => {
+            message += `\n• ${fileName}`;
+          });
+        }
+        
+        // Nếu không có file nào được import và không có file nào bị skip
+        if (importedCount === 0 && skippedCount === 0 && reimportedCount === 0) {
+          message = "Không có file nào được xử lý.";
+        }
+
         return {
           success: true,
-          message: `Đã chèn ${imageFiles.length} hình ảnh thành công với scale ${scalePercent}%!`
+          message: message
         };
       });
       
@@ -303,8 +359,10 @@ export class ImageUtils {
     try {
       return await Excel.run(async (context) => {
         const worksheet = context.workbook.worksheets.getActiveWorksheet();
+        const workbook = context.workbook;
         const shapes = worksheet.shapes;
         shapes.load("items/type");
+        workbook.load("name");
         
         await context.sync();
         
@@ -320,9 +378,12 @@ export class ImageUtils {
         
         await context.sync();
 
+        // Xóa luôn danh sách file đã import của workbook này
+        StorageService.clearImportedFiles(workbook.name);
+
         return {
           success: true,
-          message: `Đã xóa ${imageCount} hình ảnh khỏi worksheet.`
+          message: `Đã xóa ${imageCount} hình ảnh khỏi worksheet và reset danh sách file đã import.`
         };
       });
       

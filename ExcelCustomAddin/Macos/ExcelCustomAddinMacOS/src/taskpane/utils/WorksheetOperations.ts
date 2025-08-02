@@ -54,9 +54,9 @@ export class WorksheetOperations {
         // Thiết lập row height cho toàn bộ range
         formatRange.format.rowHeight = 12.75;
         
-        // Thiết lập column width cho từng column riêng biệt
-        const columns = newWorksheet.getRange("A:BC");
-        columns.format.columnWidth = 14;
+        // Thiết lập column width cho toàn bộ sheet
+        const allColumns = newWorksheet.getRange("1:1").getEntireColumn();
+        allColumns.format.columnWidth = 14;
 
         // Thiết lập page layout
         try {
