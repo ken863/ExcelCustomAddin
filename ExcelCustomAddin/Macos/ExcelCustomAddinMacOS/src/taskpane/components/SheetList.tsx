@@ -252,10 +252,10 @@ const SheetList: React.FC<SheetListProps> = ({
                   onOpenChange={(_, data) => {
                     if (!data.open) setContextMenuOpen(null);
                   }}
-                  positioning="below-end"
+                  positioning="after-top"
                 >
                   <MenuTrigger disableButtonEnhancement>
-                    <div style={{ position: 'absolute', top: 0, left: 0, width: 0, height: 0 }} />
+                    <div style={{ position: 'absolute', top: 0, right: 0, width: 0, height: 0 }} />
                   </MenuTrigger>
                   <MenuPopover>
                     <MenuList>
@@ -263,7 +263,7 @@ const SheetList: React.FC<SheetListProps> = ({
                         icon={<Rename24Regular />}
                         onClick={() => handleRenameClick(sheet.name)}
                       >
-                        Rename Sheet
+                        <Text size={200}>Rename Sheet</Text>
                       </MenuItem>
                     </MenuList>
                   </MenuPopover>
