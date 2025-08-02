@@ -122,6 +122,19 @@ const WorksheetTools: React.FC = () => {
     StorageService.saveScalePercent(scalePercent);
   }, [scalePercent]);
 
+  // Auto-hide message sau 3 giây
+  React.useEffect(() => {
+    if (message) {
+      const timer = setTimeout(() => {
+        setMessage("");
+      }, 1000);
+      
+      return () => clearTimeout(timer);
+    }
+    
+    return undefined;
+  }, [message]);
+
   // Auto-refresh khi window được focus lại
   React.useEffect(() => {
     const handleWindowFocus = () => {
