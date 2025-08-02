@@ -206,12 +206,6 @@ export class WorksheetOperations {
         targetWorksheet.name = trimmedName;
         await context.sync();
         
-        // Cập nhật tất cả hyperlinks trong workbook
-        const updatedLinksCount = await this.updateHyperlinksAfterRename(context, workbook, oldName, trimmedName);
-        
-        // Fallback: Sử dụng Find & Replace cho formulas có thể chứa sheet references
-        await this.updateFormulasAfterRename(context, workbook, oldName, trimmedName);
-        
         // Cập nhật pinned sheets storage nếu sheet này được pin
         const workbookName = workbook.name;
         if (StorageService.isSheetPinned(workbookName, oldName)) {
@@ -221,7 +215,7 @@ export class WorksheetOperations {
         
         return {
           success: true,
-          message: `Đã đổi tên sheet từ '${oldName}' thành '${trimmedName}' thành công!\nĐã cập nhật ${updatedLinksCount} hyperlinks.\n\nKiểm tra console để xem log chi tiết.`
+          message: `Đã đổi tên sheet từ '${oldName}' thành '${trimmedName}' thành công!`
         };
       });
     } catch (error) {
@@ -234,205 +228,7 @@ export class WorksheetOperations {
   }
 
   /**
-   * Cập nhật tất cả hyperlinks trong workbook sau khi đổi tên sheet
-   */
-  private static async updateHyperlinksAfterRename(
-    context: Excel.RequestContext, 
-    workbook: Excel.Workbook, 
-    oldSheetName: string, 
-    newSheetName: string
-  ): Promise<number> {
-    let updatedLinksCount = 0;
-
-    try {
-      // Lấy tất cả worksheets
-      const worksheets = workbook.worksheets;
-      worksheets.load("items/name");
-      await context.sync();
-
-      // Duyệt qua từng worksheet để cập nhật hyperlinks
-      for (const worksheet of worksheets.items) {
-        try {
-          console.log(`Processing hyperlinks in worksheet: ${worksheet.name}`);
-          
-          // Sử dụng getUsedRangeOrNullObject để tránh lỗi khi sheet trống
-          const usedRange = worksheet.getUsedRangeOrNullObject();
-          usedRange.load("rowCount, columnCount, address");
-          
-          await context.sync();
-
-          if (!usedRange.isNullObject && usedRange.rowCount && usedRange.columnCount) {
-            console.log(`Used range: ${usedRange.address}, rows: ${usedRange.rowCount}, cols: ${usedRange.columnCount}`);
-            
-            // Giới hạn để tránh quá tải và timeout
-            const maxRows = Math.min(usedRange.rowCount, 500);
-            const maxCols = Math.min(usedRange.columnCount, 50);
-            
-            // Tạo batch update để tối ưu performance
-            const cellsToUpdate: Array<{cell: Excel.Range, newAddress: string, textToDisplay: string}> = [];
-            
-            // Load tất cả cells có hyperlink potential trước
-            for (let row = 0; row < maxRows; row++) {
-              for (let col = 0; col < maxCols; col++) {
-                try {
-                  const cell = usedRange.getCell(row, col);
-                  // Load hyperlink data
-                  cell.load("hyperlink");
-                } catch (cellError) {
-                  // Skip invalid cells
-                  continue;
-                }
-              }
-            }
-            
-            // Sync một lần để load tất cả hyperlink data
-            await context.sync();
-            
-            // Bây giờ check và prepare updates
-            for (let row = 0; row < maxRows; row++) {
-              for (let col = 0; col < maxCols; col++) {
-                try {
-                  const cell = usedRange.getCell(row, col);
-                  const hyperlink = cell.hyperlink;
-                  
-                  if (hyperlink && hyperlink.address) {
-                    let needsUpdate = false;
-                    let newAddress = hyperlink.address;
-
-                    // Kiểm tra và cập nhật address cho internal links
-                    if (typeof hyperlink.address === 'string') {
-                      // Tìm các pattern khác nhau của sheet reference
-                      const patterns = [
-                        `'${oldSheetName}'!`,
-                        `${oldSheetName}!`,
-                        `#'${oldSheetName}'!`,
-                        `#${oldSheetName}!`
-                      ];
-                      
-                      for (const pattern of patterns) {
-                        if (hyperlink.address.includes(pattern)) {
-                          newAddress = hyperlink.address.replace(
-                            pattern, 
-                            pattern.includes('#') 
-                              ? pattern.replace(oldSheetName, newSheetName)
-                              : `'${newSheetName}'!`
-                          );
-                          needsUpdate = true;
-                          break;
-                        }
-                      }
-                    }
-
-                    // Thêm vào batch update nếu cần
-                    if (needsUpdate) {
-                      cellsToUpdate.push({
-                        cell: cell,
-                        newAddress: newAddress,
-                        textToDisplay: hyperlink.textToDisplay || hyperlink.address
-                      });
-                    }
-                  }
-                } catch (cellError) {
-                  // Skip cells without hyperlinks
-                  continue;
-                }
-              }
-            }
-            
-            // Áp dụng tất cả updates trong batch
-            console.log(`Found ${cellsToUpdate.length} hyperlinks to update in ${worksheet.name}`);
-            
-            for (const update of cellsToUpdate) {
-              try {
-                update.cell.hyperlink = {
-                  address: update.newAddress,
-                  textToDisplay: update.textToDisplay
-                };
-                updatedLinksCount++;
-              } catch (updateError) {
-                console.error(`Error updating hyperlink: ${updateError}`);
-              }
-            }
-            
-            // Sync sau khi update tất cả hyperlinks trong worksheet này
-            if (cellsToUpdate.length > 0) {
-              await context.sync();
-              console.log(`Updated ${cellsToUpdate.length} hyperlinks in ${worksheet.name}`);
-            }
-          }
-        } catch (worksheetError) {
-          console.error(`Error processing hyperlinks in worksheet ${worksheet.name}: ${worksheetError}`);
-          // Tiếp tục với worksheet tiếp theo
-        }
-      }
-      
-      console.log(`Total hyperlinks updated: ${updatedLinksCount}`);
-    } catch (error) {
-      console.error("Error updating hyperlinks:", error);
-    }
-
-    return updatedLinksCount;
-  }
-
-  /**
-   * Cập nhật formulas và references chứa tên sheet cũ
-   */
-  private static async updateFormulasAfterRename(
-    context: Excel.RequestContext, 
-    workbook: Excel.Workbook, 
-    oldSheetName: string, 
-    newSheetName: string
-  ): Promise<void> {
-    try {
-      // Lấy tất cả worksheets
-      const worksheets = workbook.worksheets;
-      worksheets.load("items/name");
-      await context.sync();
-
-      // Duyệt qua từng worksheet để cập nhật formulas
-      for (const worksheet of worksheets.items) {
-        try {
-          // Lấy used range
-          const usedRange = worksheet.getUsedRangeOrNullObject();
-          usedRange.load("rowCount, columnCount");
-          
-          await context.sync();
-
-          if (!usedRange.isNullObject && usedRange.rowCount && usedRange.columnCount) {
-            // Sử dụng Find & Replace để cập nhật sheet references trong formulas
-            const searchPatterns = [
-              `'${oldSheetName}'!`,
-              `${oldSheetName}!`
-            ];
-            
-            const replacePatterns = [
-              `'${newSheetName}'!`,
-              `'${newSheetName}'!`
-            ];
-            
-            for (let i = 0; i < searchPatterns.length; i++) {
-              try {
-                // Tìm và thay thế trong formulas
-                usedRange.replaceAll(searchPatterns[i], replacePatterns[i], {
-                  completeMatch: false,
-                  matchCase: false
-                });
-                await context.sync();
-              } catch (replaceError) {
-                console.warn(`Could not replace pattern ${searchPatterns[i]}: ${replaceError}`);
-              }
-            }
-          }
-        } catch (worksheetError) {
-          console.error(`Error updating formulas in worksheet ${worksheet.name}: ${worksheetError}`);
-        }
-      }
-    } catch (error) {
-      console.error("Error updating formulas after rename:", error);
-    }
-  }
-
-  /**
+   * Tạo evidence sheet  /**
    * Debug method để kiểm tra hyperlinks trong workbook
    */
   static async debugHyperlinks(): Promise<{ success: boolean; message: string }> {
