@@ -429,10 +429,6 @@ const WorksheetTools: React.FC = () => {
           </MessageBar>
         </div>
       )}
-
-      <div className={styles.fixedSection}>
-        <Divider />
-      </div>
       
       {/* Copy File Path Button - Fixed */}
       <div className={styles.fixedSection}>
@@ -441,10 +437,18 @@ const WorksheetTools: React.FC = () => {
           icon={<Copy24Regular />}
           onClick={copyFilePath}
           appearance="subtle"
-          style={{ width: '100%' }}
+          style={{ 
+            width: '100%',
+            border: `1px solid ${tokens.colorNeutralStroke1}`,
+            borderRadius: tokens.borderRadiusSmall
+          }}
         >
           <Text size={200}>Copy file path</Text>
         </Button>
+      </div>
+
+      <div className={styles.fixedSection}>
+        <Divider />
       </div>
 
       {/* Main Tools - Fixed */}
