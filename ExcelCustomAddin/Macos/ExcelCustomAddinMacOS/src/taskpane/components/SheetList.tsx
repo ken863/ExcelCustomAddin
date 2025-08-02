@@ -43,41 +43,33 @@ const useStyles = makeStyles({
     overflowY: "auto",
     border: `1px solid ${tokens.colorNeutralStroke2}`,
     borderRadius: tokens.borderRadiusSmall,
+    padding: tokens.spacingVerticalXXS, // Thêm padding để item không bị sát viền
   },
   sheetItem: {
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
-    padding: `${tokens.spacingVerticalXXS} ${tokens.spacingHorizontalXS}`, // Giảm padding
-    borderBottom: `1px solid ${tokens.colorNeutralStroke3}`,
+    padding: `${tokens.spacingVerticalXS} ${tokens.spacingHorizontalS}`, // Tăng padding cho rõ ràng hơn
+    margin: `${tokens.spacingVerticalXXS} ${tokens.spacingHorizontalXXS}`, // Thêm margin để tạo khoảng cách
+    borderRadius: tokens.borderRadiusSmall, // Thêm border radius cho đẹp
     cursor: "pointer",
-    minHeight: "28px", // Giảm từ default
+    minHeight: "25px", // Tăng height để phù hợp với padding
+    transition: "background-color 0.2s ease", // Smooth transition
     ":hover": {
       backgroundColor: tokens.colorNeutralBackground1Hover,
     },
-    ":last-child": {
-      borderBottom: "none",
-    },
   },
   selectedItem: {
-    backgroundColor: tokens.colorBrandBackground2,
-    color: tokens.colorBrandForeground2,
+    // Styling handled in getItemTextStyle function
   },
   pinnedItem: {
-    backgroundColor: tokens.colorNeutralBackground2,
+    // Styling handled in getItemTextStyle function
   },
   sheetInfo: {
     display: "flex",
     alignItems: "center",
     gap: tokens.spacingHorizontalXXS, // Giảm gap
     flex: 1,
-  },
-  tabColorIndicator: {
-    width: "8px", // Giảm từ 12px
-    height: "8px",
-    borderRadius: "50%",
-    border: `1px solid ${tokens.colorNeutralStroke2}`,
-    flexShrink: 0,
   },
   sheetName: {
     flex: 1,
@@ -161,9 +153,37 @@ const SheetList: React.FC<SheetListProps> = ({
     setContextMenuOpen(null); // Close menu after action
   };
 
-  const getTabColorStyle = (tabColor?: string) => {
-    if (!tabColor) return { backgroundColor: tokens.colorNeutralBackground3 };
-    return { backgroundColor: tabColor };
+  const getItemBackgroundStyle = () => {
+    // No background colors, keep default background
+    return {};
+  };
+
+  const getItemTextStyle = (sheet: SheetInfo) => {
+    // Use text colors to indicate different states
+    if (sheet.name === selectedSheet) {
+      return { 
+        color: tokens.colorBrandForeground1, // Brand color for selected
+        fontWeight: tokens.fontWeightSemibold
+      };
+    }
+    if (sheet.isPinned) {
+      return { 
+        color: tokens.colorNeutralForeground1, // Normal color for pinned
+        fontWeight: tokens.fontWeightSemibold
+      };
+    }
+    if (sheet.tabColor) {
+      // Use the tab color for text color
+      return {
+        color: sheet.tabColor,
+        fontWeight: tokens.fontWeightMedium
+      };
+    }
+    // Default text color
+    return {
+      color: tokens.colorNeutralForeground1,
+      fontWeight: tokens.fontWeightRegular
+    };
   };
 
   return (
@@ -198,15 +218,15 @@ const SheetList: React.FC<SheetListProps> = ({
                   sheet.name === selectedSheet && styles.selectedItem,
                   sheet.isPinned && styles.pinnedItem
                 )}
+                style={{
+                  ...getItemBackgroundStyle(),
+                  ...getItemTextStyle(sheet)
+                }}
                 onClick={() => handleSheetClick(sheet.name)}
                 onContextMenu={(e) => handleContextMenu(e, sheet.name)}
                 title={`Left click to activate '${sheet.name}' | Right click for options`}
               >
                 <div className={styles.sheetInfo}>
-                  <div
-                    className={styles.tabColorIndicator}
-                    style={getTabColorStyle(sheet.tabColor)}
-                  />
                   <Text className={styles.sheetName}>
                     {sheet.name}
                     {sheet.isPinned && " 📌"}

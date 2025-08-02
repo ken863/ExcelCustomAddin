@@ -63,6 +63,13 @@ export class WorksheetOperations {
           newWorksheet.pageLayout.orientation = Excel.PageOrientation.landscape;
           const printRange = newWorksheet.getRange("A1:BC48");
           newWorksheet.pageLayout.setPrintArea(printRange);
+          
+          // Thiết lập Fit to Page (tương đương với setFitToPage(true) trong PHP)
+          // Trong Excel JavaScript API, chúng ta sử dụng zoom để fit to page
+          newWorksheet.pageLayout.zoom = {
+            horizontalFitToPages: 1,
+            verticalFitToPages: 1
+          };
         } catch (layoutError) {
           console.warn("Page layout settings not fully supported:", layoutError);
         }
