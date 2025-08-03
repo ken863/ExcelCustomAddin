@@ -12,7 +12,7 @@ applyTo: "**"
 ## React và JavaScript
 - Sử dụng React cho giao diện người dùng, không sử dụng các framework khác như Angular hoặc Vue.js.
 - Sử dụng JavaScript ES6+ cho mã nguồn, không sử dụng các phiên bản cũ hơn.
-- Sử dụng `const` và `let` thay vì              `var` để khai báo biến.
+- Sử dụng `const` và `let` thay vì `var` để khai báo biến.
 - Sử dụng arrow functions thay vì function expressions truyền thống.
 - Sử dụng destructuring để truy cập các thuộc tính của đối tượng.
 - Sử dụng template literals thay vì chuỗi nối.              
