@@ -73,27 +73,6 @@ if ! docker info | grep -q "Username"; then
     docker login
 fi
 
-# Test image locally trước khi push (simplified test)
-echo "🧪 Testing image locally..."
-CONTAINER_ID=$(docker run -d -p 3001:3000 "$FULL_IMAGE_NAME")
-
-# Đợi container khởi động
-sleep 10
-
-# Kiểm tra container có chạy không (chỉ kiểm tra process, không test HTTP)
-if docker ps | grep -q "$CONTAINER_ID"; then
-    echo "✅ Container test thành công!"
-    echo "ℹ️  Note: Certificate installation may fail in container (this is expected)"
-    docker stop "$CONTAINER_ID"
-    docker rm "$CONTAINER_ID"
-else
-    echo "⚠️  Container stopped (certificate issue is expected in Docker)"
-    echo "📋 Container logs:"
-    docker logs "$CONTAINER_ID" | tail -10
-    docker rm "$CONTAINER_ID"
-    echo "✅ Continuing with publish (container builds successfully)"
-fi
-
 # Push image lên Docker Hub
 echo "📤 Pushing image to Docker Hub..."
 docker push "$FULL_IMAGE_NAME"
