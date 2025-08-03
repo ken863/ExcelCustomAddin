@@ -18,7 +18,9 @@ services:
       - ./src:/app/src
       - ./assets:/app/assets
       # Mount certificates để persist qua restarts
-      - addin-certs:/root/.office-addin-dev-certs
+      - addin-certs:/home/nodeuser/.office-addin-dev-certs
+      # Mount proxy certificate nếu có (uncomment nếu cần)
+      # - ./proxy-cert.crt:/tmp/proxy-cert.crt:ro
     environment:
       - NODE_ENV=development
       - PORT=3000
@@ -26,6 +28,8 @@ services:
       - HTTPS_PROXY=${HTTPS_PROXY}
       - http_proxy=${http_proxy}
       - https_proxy=${https_proxy}
+      # Uncomment để sử dụng proxy certificate từ mount path
+      # - PROXY_CERT_PATH=/tmp/proxy-cert.crt
     networks:
       - addin-network
     restart: unless-stopped

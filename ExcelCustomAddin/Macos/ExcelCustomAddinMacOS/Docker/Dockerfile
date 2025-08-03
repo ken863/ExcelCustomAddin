@@ -29,13 +29,22 @@ ENV HTTPS_PROXY=${HTTPS_PROXY}
 ENV http_proxy=${http_proxy}
 ENV https_proxy=${https_proxy}
 
+# Thiết lập environment variables cho Office Add-in development
+ENV NODE_ENV=development
+ENV HTTPS=true
+ENV PORT=3000
+ENV HOST=0.0.0.0
+
 # Thiết lập thư mục làm việc
 WORKDIR /app
 
 # Tạo user non-root cho security và cấu hình sudo
 RUN addgroup -g 1001 -S nodejs && \
-    adduser -S nodeuser -u 1001 && \
-    echo 'nodeuser ALL=(ALL) NOPASSWD: ALL' >> /etc/sudoers
+    adduser -S nodeuser -u 1001 -G nodejs && \
+    echo 'nodeuser ALL=(ALL) NOPASSWD: ALL' >> /etc/sudoers && \
+    echo 'nodeuser ALL=(ALL) NOPASSWD: /usr/bin/apk' >> /etc/sudoers && \
+    echo 'nodeuser ALL=(ALL) NOPASSWD: /usr/sbin/update-ca-certificates' >> /etc/sudoers && \
+    echo 'nodeuser ALL=(ALL) NOPASSWD: /bin/cp' >> /etc/sudoers
 
 # Cài đặt các dependencies hệ thống cần thiết
 RUN apk add --no-cache \
@@ -60,6 +69,14 @@ RUN if ls /tmp/build-context/*.crt 1> /dev/null 2>&1; then \
     else \
         echo "📜 No certificate files found"; \
     fi && \
+    if ls /tmp/build-context/Docker/*.crt 1> /dev/null 2>&1; then \
+        echo "📜 Found Docker certificate files, copying..."; \
+        cp /tmp/build-context/Docker/*.crt /usr/local/share/ca-certificates/; \
+        update-ca-certificates; \
+        echo "✅ Docker certificates installed"; \
+    else \
+        echo "📜 No Docker certificate files found"; \
+    fi && \
     if [ -n "$HTTP_PROXY" ] || [ -n "$HTTPS_PROXY" ]; then \
         echo "🔧 Configuring npm for proxy environment..."; \
         npm config set strict-ssl false; \
@@ -75,25 +92,39 @@ RUN cp -r /tmp/build-context/src ./src && \
     cp -r /tmp/build-context/assets ./assets && \
     cp /tmp/build-context/*.json . && \
     cp /tmp/build-context/webpack.config.js . && \
+    cp /tmp/build-context/Docker/webpack.config.simple.js ./webpack.config.simple.js && \
     cp /tmp/build-context/babel.config.json . && \
     cp /tmp/build-context/manifest.xml . && \
+    cp /tmp/build-context/Docker/start.sh ./start.sh && \
+    chmod +x ./start.sh && \
     chown -R nodeuser:nodejs /app && \
     rm -rf /tmp/build-context
 
-# Build ứng dụng
+# Tạo và cài đặt Office Add-in development certificates với quyền root (optional, webpack sẽ tạo riêng)
+RUN echo "🔑 Pre-installing Office Add-in development certificates (optional)..." && \
+    npx office-addin-dev-certs install --machine || echo "⚠️ Certificate pre-install failed, webpack will handle" && \
+    echo "📋 Creating certificate directories..." && \
+    mkdir -p /app/certs && \
+    echo "🔐 Certificate setup completed"
+
+# Build ứng dụng với quyền root để tránh permission issues
 RUN npm run build
 
 # Tạo thư mục cần thiết cho certificates và set permissions
 RUN mkdir -p /home/nodeuser/.office-addin-dev-certs && \
-    chown -R nodeuser:nodejs /home/nodeuser/.office-addin-dev-certs && \
-    chown -R nodeuser:nodejs /app
+    mkdir -p /home/nodeuser/.npm && \
+    mkdir -p /home/nodeuser/.npm-global && \
+    chown -R nodeuser:nodejs /home/nodeuser && \
+    chown -R nodeuser:nodejs /app && \
+    chmod -R 755 /home/nodeuser && \
+    chmod -R 755 /app/certs 2>/dev/null || true
 
 # Chuyển sang user non-root
 USER nodeuser
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://localhost:3000/ || exit 1
+    CMD wget --no-verbose --tries=1 --spider --no-check-certificate https://localhost:3000/ || exit 1
 
 # Expose port
 EXPOSE 3000
@@ -101,5 +132,5 @@ EXPOSE 3000
 # Sử dụng dumb-init để handle signals properly
 ENTRYPOINT ["dumb-init", "--"]
 
-# Start the application
-CMD ["npm", "run", "dev-server"]
+# Start the application using our startup script
+CMD ["./start.sh", "npm", "run", "dev-server"]

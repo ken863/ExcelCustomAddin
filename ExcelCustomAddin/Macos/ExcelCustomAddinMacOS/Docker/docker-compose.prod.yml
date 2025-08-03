@@ -6,14 +6,21 @@ services:
     container_name: excel-custom-addin-prod
     ports:
       - "3000:3000"
+    volumes:
+      # Mount proxy certificate nếu có (uncomment nếu cần)
+      # - ./proxy-cert.crt:/tmp/proxy-cert.crt:ro
     environment:
       - NODE_ENV=production
       - PORT=3000
+      - HTTP_PROXY=${HTTP_PROXY}
+      - HTTPS_PROXY=${HTTPS_PROXY}
+      # Uncomment để sử dụng proxy certificate từ mount path
+      # - PROXY_CERT_PATH=/tmp/proxy-cert.crt
     networks:
       - addin-network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "--no-check-certificate", "https://localhost:3000/"]
       interval: 30s
       timeout: 10s
       retries: 3

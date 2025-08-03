@@ -2,6 +2,34 @@
 applyTo: "**"
 ---
 # Project general coding standards
+
+## General coding standards
+- Tất cả mã nguồn phải tuân thủ các tiêu chuẩn mã hóa hiện đại và tốt nhất.
+- Sử dụng các công cụ kiểm tra mã nguồn như ESLint và Prettier để đảm bảo mã nguồn sạch sẽ và nhất quán.
+- Sử dụng `git` để quản lý mã nguồn, commit thường xuyên và có ý nghĩa.
+- Tất cả các commit phải có thông điệp rõ ràng, mô tả ngắn gọn về thay đổi đã thực hiện.
+- Sử dụng `git branch` để quản lý các tính năng và sửa lỗi, không commit trực tiếp vào nhánh `main` hoặc `master`. 
+- Tất cả các pull request phải được xem xét và phê duyệt bởi ít nhất một người khác trước khi được hợp nhất vào nhánh chính.
+- Sử dụng `semantic versioning` cho các phiên bản của dự án, bao gồm các tag rõ ràng cho mỗi phiên bản.
+- Tất cả các tệp mã nguồn phải được đặt trong thư mục `src` và không được để lẫn lộn với các tệp cấu hình hoặc tài liệu khác.
+- Tất cả các tệp cấu hình phải được đặt trong thư mục `config` và không được để lẫn lộn với mã nguồn.
+- Tất cả các tệp tài liệu phải được đặt trong thư mục `docs` và không được để lẫn lộn với mã nguồn hoặc cấu hình.
+- Tất cả các tệp tài nguyên tĩnh (như hình ảnh, biểu tượng, v.v.) phải được đặt trong thư mục `assets` và không được để lẫn lộn với mã nguồn hoặc cấu hình.
+- Tất cả các tệp liên quan đến Docker phải được đặt trong thư mục `Docker` và không được để lẫn lộn với mã nguồn hoặc cấu hình.
+- Tất cả các tệp liên quan đến CI/CD phải được đặt trong thư mục `.github/workflows` và không được để lẫn lộn với mã nguồn hoặc cấu hình.
+- Tất cả các tệp liên quan đến kiểm thử phải được đặt trong thư mục `tests` và không được để lẫn lộn với mã nguồn hoặc cấu hình.
+- Tất cả các tệp liên quan đến tài liệu API phải được đặt trong thư mục `api-docs` và không được để lẫn lộn với mã nguồn hoặc cấu hình.
+- Tất cả các tệp liên quan đến tài liệu hướng dẫn sử dụng phải được đặt trong thư mục `guides` và không được để lẫn lộn với mã nguồn hoặc cấu hình.
+- Tất cả các tệp liên quan đến tài liệu kiến trúc phải được đặt trong thư mục `architecture` và không được để lẫn lộn với mã nguồn hoặc cấu hình.
+- Tất cả các tệp liên quan đến tài liệu thiết kế phải được đặt trong thư mục `design` và không được để lẫn lộn với mã nguồn hoặc cấu hình.
+- Tất cả các tệp liên quan đến tài liệu triển khai phải được đặt trong thư mục `deployment` và không được để lẫn lộn với mã nguồn hoặc cấu hình.
+- Tất cả các tệp liên quan đến tài liệu bảo trì phải được đặt trong thư mục `maintenance` và không được để lẫn lộn với mã nguồn hoặc cấu hình.
+- Tất cả các tệp liên quan đến tài liệu bảo mật phải được đặt trong thư mục `security` và không được để lẫn lộn với mã nguồn hoặc cấu hình.
+- Tất cả các tệp liên quan đến tài liệu tuân thủ phải được đặt trong thư mục `compliance` và không được để lẫn lộn với mã nguồn hoặc cấu hình.
+
+## Reponsibility
+- Không cần tóm tắt các thay đổi khi phản hồi yêu cầu
+
 ## Response language
 - Use Vietnamese for all code comments, documentation, and commit messages
 
