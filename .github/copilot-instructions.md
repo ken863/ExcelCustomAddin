@@ -35,7 +35,7 @@ applyTo: "**"
 
 ## readme.md
 - Tất cả các tệp README.md phải được viết bằng tiếng Việt, giải thích rõ ràng về cách sử dụng, cấu hình và triển khai dự án.
-- Chỉ tạo 1 file README.md duy nhất trong thư mục gốc của dự án, không tạo các tệp README.md khác trong các thư mục con.
+- Chỉ tạo 1 file .md duy nhất trong thư mục gốc của dự án, không tạo các tệp .md khác trong các thư mục con.
 
 ## React và JavaScript
 - Sử dụng React cho giao diện người dùng, không sử dụng các framework khác như Angular hoặc Vue.js.
