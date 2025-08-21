@@ -31,27 +31,25 @@
             this.components = new System.ComponentModel.Container();
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(ActionPanelControl));
             this.metroPanel1 = new MetroFramework.Controls.MetroPanel();
+            this.toolStrip1 = new System.Windows.Forms.ToolStrip();
+            this.toolStripFilePath = new System.Windows.Forms.ToolStripLabel();
             this.groupBox1 = new System.Windows.Forms.GroupBox();
             this.numScalePercent = new System.Windows.Forms.NumericUpDown();
             this.btnInsertPictures = new System.Windows.Forms.Button();
             this.txtImagePath = new MetroFramework.Controls.MetroTextBox();
-            this.metroLabel1 = new MetroFramework.Controls.MetroLabel();
             this.btnCreateEvidence = new System.Windows.Forms.Button();
             this.imageList1 = new System.Windows.Forms.ImageList(this.components);
             this.btnFormatDocument = new System.Windows.Forms.Button();
-            this.txtSheetListLabel = new MetroFramework.Controls.MetroLabel();
             this.listofSheet = new System.Windows.Forms.ListView();
             this.contextMenuStrip1 = new System.Windows.Forms.ContextMenuStrip(this.components);
             this.btnChangeSheetName = new System.Windows.Forms.ToolStripMenuItem();
             this.btnPinSheet = new System.Windows.Forms.ToolStripMenuItem();
             this.btnInsertMultipleImages = new System.Windows.Forms.Button();
-            this.toolStrip1 = new System.Windows.Forms.ToolStrip();
-            this.toolStripFilePath = new System.Windows.Forms.ToolStripLabel();
             this.metroPanel1.SuspendLayout();
+            this.toolStrip1.SuspendLayout();
             this.groupBox1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.numScalePercent)).BeginInit();
             this.contextMenuStrip1.SuspendLayout();
-            this.toolStrip1.SuspendLayout();
             this.SuspendLayout();
             // 
             // metroPanel1
@@ -60,7 +58,6 @@
             this.metroPanel1.Controls.Add(this.groupBox1);
             this.metroPanel1.Controls.Add(this.btnCreateEvidence);
             this.metroPanel1.Controls.Add(this.btnFormatDocument);
-            this.metroPanel1.Controls.Add(this.txtSheetListLabel);
             this.metroPanel1.Controls.Add(this.listofSheet);
             this.metroPanel1.Dock = System.Windows.Forms.DockStyle.Fill;
             this.metroPanel1.HorizontalScrollbarBarColor = true;
@@ -74,6 +71,26 @@
             this.metroPanel1.VerticalScrollbarHighlightOnWheel = false;
             this.metroPanel1.VerticalScrollbarSize = 10;
             // 
+            // toolStrip1
+            // 
+            this.toolStrip1.Dock = System.Windows.Forms.DockStyle.Bottom;
+            this.toolStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.toolStripFilePath});
+            this.toolStrip1.Location = new System.Drawing.Point(0, 798);
+            this.toolStrip1.Name = "toolStrip1";
+            this.toolStrip1.Size = new System.Drawing.Size(424, 25);
+            this.toolStrip1.TabIndex = 20;
+            this.toolStrip1.Text = "toolStrip1";
+            // 
+            // toolStripFilePath
+            // 
+            this.toolStripFilePath.Font = new System.Drawing.Font("Segoe UI Semibold", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.toolStripFilePath.ForeColor = System.Drawing.SystemColors.ActiveCaptionText;
+            this.toolStripFilePath.Name = "toolStripFilePath";
+            this.toolStripFilePath.Size = new System.Drawing.Size(38, 22);
+            this.toolStripFilePath.Text = "Book1";
+            this.toolStripFilePath.Click += new System.EventHandler(this.toolStripFilePath_Click);
+            // 
             // groupBox1
             // 
             this.groupBox1.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
@@ -82,7 +99,6 @@
             this.groupBox1.Controls.Add(this.numScalePercent);
             this.groupBox1.Controls.Add(this.btnInsertPictures);
             this.groupBox1.Controls.Add(this.txtImagePath);
-            this.groupBox1.Controls.Add(this.metroLabel1);
             this.groupBox1.Font = new System.Drawing.Font("Segoe UI Semibold", 9F, System.Drawing.FontStyle.Bold);
             this.groupBox1.Location = new System.Drawing.Point(4, 108);
             this.groupBox1.Name = "groupBox1";
@@ -95,9 +111,9 @@
             // 
             this.numScalePercent.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.numScalePercent.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            this.numScalePercent.Location = new System.Drawing.Point(366, 22);
+            this.numScalePercent.Location = new System.Drawing.Point(352, 22);
             this.numScalePercent.Name = "numScalePercent";
-            this.numScalePercent.Size = new System.Drawing.Size(45, 23);
+            this.numScalePercent.Size = new System.Drawing.Size(59, 23);
             this.numScalePercent.TabIndex = 3;
             this.numScalePercent.Value = new decimal(new int[] {
             90,
@@ -112,9 +128,9 @@
             this.btnInsertPictures.ForeColor = System.Drawing.SystemColors.ActiveCaptionText;
             this.btnInsertPictures.Image = global::ExcelCustomAddin.Properties.Resources.pictures1;
             this.btnInsertPictures.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            this.btnInsertPictures.Location = new System.Drawing.Point(85, 51);
+            this.btnInsertPictures.Location = new System.Drawing.Point(6, 51);
             this.btnInsertPictures.Name = "btnInsertPictures";
-            this.btnInsertPictures.Size = new System.Drawing.Size(326, 39);
+            this.btnInsertPictures.Size = new System.Drawing.Size(405, 39);
             this.btnInsertPictures.TabIndex = 2;
             this.btnInsertPictures.Text = "Insert images";
             this.btnInsertPictures.UseVisualStyleBackColor = true;
@@ -124,23 +140,13 @@
             // 
             this.txtImagePath.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.txtImagePath.Location = new System.Drawing.Point(85, 22);
+            this.txtImagePath.Location = new System.Drawing.Point(6, 22);
             this.txtImagePath.Multiline = true;
             this.txtImagePath.Name = "txtImagePath";
-            this.txtImagePath.Size = new System.Drawing.Size(275, 23);
+            this.txtImagePath.PromptText = "Image Path";
+            this.txtImagePath.Size = new System.Drawing.Size(340, 23);
             this.txtImagePath.TabIndex = 1;
             this.txtImagePath.Text = "C:\\Images";
-            // 
-            // metroLabel1
-            // 
-            this.metroLabel1.AutoSize = true;
-            this.metroLabel1.FontSize = MetroFramework.MetroLabelSize.Small;
-            this.metroLabel1.FontWeight = MetroFramework.MetroLabelWeight.Regular;
-            this.metroLabel1.Location = new System.Drawing.Point(6, 25);
-            this.metroLabel1.Name = "metroLabel1";
-            this.metroLabel1.Size = new System.Drawing.Size(77, 15);
-            this.metroLabel1.TabIndex = 0;
-            this.metroLabel1.Text = "_Images Path";
             // 
             // btnCreateEvidence
             // 
@@ -185,17 +191,6 @@
             this.btnFormatDocument.UseVisualStyleBackColor = true;
             this.btnFormatDocument.Click += new System.EventHandler(this.btnFormatDocument_Click);
             // 
-            // txtSheetListLabel
-            // 
-            this.txtSheetListLabel.AutoSize = true;
-            this.txtSheetListLabel.FontSize = MetroFramework.MetroLabelSize.Small;
-            this.txtSheetListLabel.FontWeight = MetroFramework.MetroLabelWeight.Bold;
-            this.txtSheetListLabel.Location = new System.Drawing.Point(3, 207);
-            this.txtSheetListLabel.Name = "txtSheetListLabel";
-            this.txtSheetListLabel.Size = new System.Drawing.Size(69, 15);
-            this.txtSheetListLabel.TabIndex = 16;
-            this.txtSheetListLabel.Text = "SHEET LIST";
-            // 
             // listofSheet
             // 
             this.listofSheet.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
@@ -207,9 +202,9 @@
             this.listofSheet.FullRowSelect = true;
             this.listofSheet.HeaderStyle = System.Windows.Forms.ColumnHeaderStyle.None;
             this.listofSheet.HideSelection = false;
-            this.listofSheet.Location = new System.Drawing.Point(3, 225);
+            this.listofSheet.Location = new System.Drawing.Point(3, 210);
             this.listofSheet.Name = "listofSheet";
-            this.listofSheet.Size = new System.Drawing.Size(418, 570);
+            this.listofSheet.Size = new System.Drawing.Size(418, 585);
             this.listofSheet.TabIndex = 13;
             this.listofSheet.UseCompatibleStateImageBehavior = false;
             this.listofSheet.View = System.Windows.Forms.View.Details;
@@ -245,26 +240,6 @@
             this.btnInsertMultipleImages.Size = new System.Drawing.Size(75, 23);
             this.btnInsertMultipleImages.TabIndex = 0;
             // 
-            // toolStrip1
-            // 
-            this.toolStrip1.Dock = System.Windows.Forms.DockStyle.Bottom;
-            this.toolStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.toolStripFilePath});
-            this.toolStrip1.Location = new System.Drawing.Point(0, 798);
-            this.toolStrip1.Name = "toolStrip1";
-            this.toolStrip1.Size = new System.Drawing.Size(424, 25);
-            this.toolStrip1.TabIndex = 20;
-            this.toolStrip1.Text = "toolStrip1";
-            // 
-            // toolStripFilePath
-            // 
-            this.toolStripFilePath.Font = new System.Drawing.Font("Segoe UI Semibold", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.toolStripFilePath.ForeColor = System.Drawing.SystemColors.ActiveCaptionText;
-            this.toolStripFilePath.Name = "toolStripFilePath";
-            this.toolStripFilePath.Size = new System.Drawing.Size(38, 22);
-            this.toolStripFilePath.Text = "Book1";
-            this.toolStripFilePath.Click += new System.EventHandler(this.toolStripFilePath_Click);
-            // 
             // ActionPanelControl
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -274,12 +249,11 @@
             this.Size = new System.Drawing.Size(424, 823);
             this.metroPanel1.ResumeLayout(false);
             this.metroPanel1.PerformLayout();
-            this.groupBox1.ResumeLayout(false);
-            this.groupBox1.PerformLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.numScalePercent)).EndInit();
-            this.contextMenuStrip1.ResumeLayout(false);
             this.toolStrip1.ResumeLayout(false);
             this.toolStrip1.PerformLayout();
+            this.groupBox1.ResumeLayout(false);
+            ((System.ComponentModel.ISupportInitialize)(this.numScalePercent)).EndInit();
+            this.contextMenuStrip1.ResumeLayout(false);
             this.ResumeLayout(false);
 
         }
@@ -291,13 +265,11 @@
         private System.Windows.Forms.ContextMenuStrip contextMenuStrip1;
         private System.Windows.Forms.ToolStripMenuItem btnChangeSheetName;
         private System.Windows.Forms.ToolStripMenuItem btnPinSheet;
-        private MetroFramework.Controls.MetroLabel txtSheetListLabel;
         private System.Windows.Forms.Button btnFormatDocument;
         private System.Windows.Forms.ImageList imageList1;
         private System.Windows.Forms.Button btnCreateEvidence;
         private System.Windows.Forms.Button btnInsertMultipleImages;
         private System.Windows.Forms.GroupBox groupBox1;
-        private MetroFramework.Controls.MetroLabel metroLabel1;
         public MetroFramework.Controls.MetroTextBox txtImagePath;
         private System.Windows.Forms.Button btnInsertPictures;
         public System.Windows.Forms.NumericUpDown numScalePercent;

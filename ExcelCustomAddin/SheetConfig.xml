@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<SheetConfiguration>
+  <!-- Cấu hình cho các sheet đặc biệt và prefix tương ứng -->
+  <SpecialSheets>
+    <!-- Sheet 共通 sử dụng prefix 共通_ -->
+    <Sheet>
+      <Name>共通</Name>
+      <Prefix>共通_</Prefix>
+      <ReferenceColumnHeader>参考 No.</ReferenceColumnHeader>
+      <NumberFormat>D2</NumberFormat> <!-- 01, 02, 03... -->
+      <Description>Sheet chung với prefix 共通_</Description>
+    </Sheet>
+    
+    <!-- Sheet テスト項目 sử dụng prefix エビデンス_ -->
+    <Sheet>
+      <Name>テスト項目</Name>
+      <Prefix>エビデンス_</Prefix>
+      <ReferenceColumnHeader>参考 No.</ReferenceColumnHeader>
+      <NumberFormat>D2</NumberFormat> <!-- 01, 02, 03... -->
+      <Description>Sheet test items với prefix エビデンス_</Description>
+    </Sheet>
+  </SpecialSheets>
+  
+  <!-- Cấu hình chung -->
+  <GeneralSettings>
+    <!-- Dòng để kiểm tra header (mặc định là dòng 2) -->
+    <HeaderRowIndex>2</HeaderRowIndex>
+    
+    <!-- Có tự động ghi giá trị vào cell không -->
+    <AutoFillCell>true</AutoFillCell>
+    
+    <!-- Có hiển thị debug log không -->
+    <EnableDebugLog>true</EnableDebugLog>
+    
+    <!-- Số bắt đầu nếu không tìm thấy pattern nào (mặc định là 1, sẽ tạo ra 01) -->
+    <StartingNumber>1</StartingNumber>
+  </GeneralSettings>
+  
+  <!-- Cấu hình logging -->
+  <LoggingSettings>
+    <!-- Đường dẫn thư mục log (để trống sẽ sử dụng C:\ExcelAddinLogs) -->
+    <LogDirectory>C:\ExcelAddinLogs</LogDirectory>
+    
+    <!-- Có ghi log vào file không -->
+    <EnableFileLogging>true</EnableFileLogging>
+    
+    <!-- Có ghi log ra Debug console không -->
+    <EnableDebugOutput>true</EnableDebugOutput>
+    
+    <!-- Mức độ log: DEBUG, INFO, WARNING, ERROR -->
+    <LogLevel>DEBUG</LogLevel>
+    
+    <!-- Tên file log (sẽ được append với ngày tháng) -->
+    <LogFileName>ExcelAddin</LogFileName>
+  </LoggingSettings>
+  
+  <!-- Danh sách các sheet name có thể mở rộng -->
+  <ExtendedSheets>
+    <!-- Có thể thêm các sheet khác nếu cần -->
+    <Sheet>
+      <Name>設計書</Name>
+      <Prefix>設計_</Prefix>
+      <ReferenceColumnHeader>No.</ReferenceColumnHeader>
+      <NumberFormat>D3</NumberFormat> <!-- 001, 002, 003... -->
+      <Description>Sheet thiết kế với prefix 設計_</Description>
+    </Sheet>
+    
+    <Sheet>
+      <Name>検証結果</Name>
+      <Prefix>検証_</Prefix>
+      <ReferenceColumnHeader>検証 No.</ReferenceColumnHeader>
+      <NumberFormat>D2</NumberFormat>
+      <Description>Sheet kết quả kiểm chứng với prefix 検証_</Description>
+    </Sheet>
+  </ExtendedSheets>
+</SheetConfiguration>

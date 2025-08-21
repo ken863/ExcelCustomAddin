@@ -107,7 +107,7 @@ namespace ExcelCustomAddin
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error in UpdateFilePathDisplay: {ex.Message}");
+                Logger.Error($"Error in UpdateFilePathDisplay: {ex.Message}", ex);
                 if (toolStripFilePath != null)
                 {
                     toolStripFilePath.Text = "Lỗi khi lấy đường dẫn file";
@@ -138,7 +138,7 @@ namespace ExcelCustomAddin
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error in ContextMenuStrip1_Opening: {ex.Message}");
+                Logger.Error($"Error in ContextMenuStrip1_Opening: {ex.Message}", ex);
                 // Cancel context menu if error occurs
                 e.Cancel = true;
             }
@@ -241,7 +241,7 @@ namespace ExcelCustomAddin
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error in btnPinSheet_Click: {ex.Message}");
+                Logger.Error($"Error in btnPinSheet_Click: {ex.Message}", ex);
                 System.Windows.Forms.MessageBox.Show($"Có lỗi xảy ra khi thao tác với sheet: {ex.Message}", "Lỗi",
                     System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Error);
             }
@@ -320,12 +320,12 @@ namespace ExcelCustomAddin
                 catch (Exception ex)
                 {
                     // Log error but don't crash
-                    System.Diagnostics.Debug.WriteLine($"Error in EnsureVisible: {ex.Message}");
+                    Logger.Error($"Error in EnsureVisible: {ex.Message}", ex);
                 }
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error in BindSheetList: {ex.Message}");
+                Logger.Error($"Error in BindSheetList: {ex.Message}", ex);
                 // Ensure EndUpdate is called even if error occurs
                 try
                 {
@@ -407,7 +407,7 @@ namespace ExcelCustomAddin
             catch (Exception ex)
             {
                 // Log error nhưng không hiển thị MessageBox để không làm gián đoạn khởi động
-                System.Diagnostics.Debug.WriteLine($"Error loading settings: {ex.Message}");
+                Logger.Error($"Error loading settings: {ex.Message}", ex);
             }
         }
 
@@ -439,7 +439,7 @@ namespace ExcelCustomAddin
             catch (Exception ex)
             {
                 // Log error nhưng không hiển thị MessageBox
-                System.Diagnostics.Debug.WriteLine($"Error saving settings: {ex.Message}");
+                Logger.Error($"Error saving settings: {ex.Message}", ex);
             }
         }
 
@@ -481,7 +481,7 @@ namespace ExcelCustomAddin
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error setting up auto-save: {ex.Message}");
+                Logger.Error($"Error setting up auto-save: {ex.Message}", ex);
             }
         }
 
