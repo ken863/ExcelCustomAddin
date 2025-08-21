@@ -1,0 +1,87 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/office-js/add-in-manifest.schema.json",
+  "id": "f2b103f1-1ab1-4e1b-8f0b-072aa3d4e19d",
+  "version": "1.0.0.0",
+  "providerName": "Excel Custom Add-in",
+  "defaultLocale": "en-US",
+  "displayName": {
+    "default": "Excel Custom Add-in"
+  },
+  "description": {
+    "default": "Excel add-in for worksheet tools and image management"
+  },
+  "iconUrl": "https://localhost:3000/assets/icon-32.png",
+  "highResolutionIconUrl": "https://localhost:3000/assets/icon-64.png",
+  "supportUrl": "https://localhost:3000",
+  "hosts": [
+    {
+      "name": "Workbook"
+    }
+  ],
+  "requirements": [
+    {
+      "name": "SharedRuntime",
+      "minVersion": "1.1"
+    }
+  ],
+  "defaultSettings": {
+    "sourceLocation": "https://localhost:3000/taskpane.html",
+    "requestedHeight": 250,
+    "requestedWidth": 320
+  },
+  "permissions": "ReadWriteDocument",
+  "ribbons": [
+    {
+      "id": "ContextMenuCell",
+      "controls": [
+        {
+          "id": "MyButton",
+          "type": "button",
+          "label": "My Add-in",
+          "icons": [
+            {
+              "size": 16,
+              "sourceLocation": "https://localhost:3000/assets/icon-16.png"
+            },
+            {
+              "size": 32,
+              "sourceLocation": "https://localhost:3000/assets/icon-32.png"
+            },
+            {
+              "size": 80,
+              "sourceLocation": "https://localhost:3000/assets/icon-80.png"
+            }
+          ],
+          "supertip": {
+            "title": "Excel Custom Add-in",
+            "description": "Open Excel worksheet tools"
+          },
+          "actionId": "ShowTaskpane"
+        }
+      ]
+    }
+  ],
+  "actions": [
+    {
+      "id": "ShowTaskpane",
+      "type": "ShowTaskpane",
+      "sourceLocation": "https://localhost:3000/taskpane.html"
+    }
+  ],
+  "runtimes": [
+    {
+      "id": "ContosoAddin.Url",
+      "type": "general",
+      "code": {
+        "page": "https://localhost:3000/taskpane.html"
+      },
+      "lifetime": "long",
+      "actions": [
+        {
+          "id": "ShowTaskpane",
+          "type": "ShowTaskpane"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,43 @@
+# Bỏ qua node_modules
+node_modules/
+
+# Bỏ qua build files
+dist/
+build/
+
+# Bỏ qua log files
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Bỏ qua environment files (nhưng giữ .env để có thể dùng cho proxy)
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Bỏ qua certificates (trừ .crt files cần cho proxy)
+*.pfx
+*.p12
+*.key
+*.pem
+
+# Bỏ qua OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Bỏ qua IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Bỏ qua temporary files
+*.tmp
+*.temp
