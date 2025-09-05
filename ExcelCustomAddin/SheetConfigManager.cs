@@ -18,7 +18,6 @@ namespace ExcelCustomAddin
     {
       public string Name { get; set; }
       public string Prefix { get; set; }
-      public string ReferenceColumnHeader { get; set; }
       public string NumberFormat { get; set; }
       public string Description { get; set; }
     }
@@ -39,7 +38,7 @@ namespace ExcelCustomAddin
     /// </summary>
     public class LoggingConfig
     {
-      public string LogDirectory { get; set; } = "";
+      public string LogDirectory { get; set; } = @"C:\ExcelCustomAddin";
       public bool EnableFileLogging { get; set; } = true;
       public bool EnableDebugOutput { get; set; } = true;
       public string LogLevel { get; set; } = "DEBUG";
@@ -62,8 +61,16 @@ namespace ExcelCustomAddin
     {
       try
       {
-        // Lấy đường dẫn của assembly hiện tại
-        return Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
+        // Sử dụng thư mục cố định C:\ExcelCustomAddin
+        string configDirectory = @"C:\ExcelCustomAddin";
+
+        // Tạo thư mục nếu chưa tồn tại
+        if (!Directory.Exists(configDirectory))
+        {
+          Directory.CreateDirectory(configDirectory);
+        }
+
+        return configDirectory;
       }
       catch
       {
@@ -98,7 +105,6 @@ namespace ExcelCustomAddin
             {
               Name = sheetElement.Element("Name")?.Value ?? "",
               Prefix = sheetElement.Element("Prefix")?.Value ?? "",
-              ReferenceColumnHeader = sheetElement.Element("ReferenceColumnHeader")?.Value ?? "",
               NumberFormat = sheetElement.Element("NumberFormat")?.Value ?? "D2",
               Description = sheetElement.Element("Description")?.Value ?? ""
             });
@@ -116,7 +122,6 @@ namespace ExcelCustomAddin
             {
               Name = sheetElement.Element("Name")?.Value ?? "",
               Prefix = sheetElement.Element("Prefix")?.Value ?? "",
-              ReferenceColumnHeader = sheetElement.Element("ReferenceColumnHeader")?.Value ?? "",
               NumberFormat = sheetElement.Element("NumberFormat")?.Value ?? "D2",
               Description = sheetElement.Element("Description")?.Value ?? ""
             });
@@ -184,7 +189,6 @@ namespace ExcelCustomAddin
                 {
                     Name = "共通",
                     Prefix = "共通_",
-                    ReferenceColumnHeader = "参考 No.",
                     NumberFormat = "D2",
                     Description = "Sheet chung với prefix 共通_"
                 },
@@ -192,7 +196,6 @@ namespace ExcelCustomAddin
                 {
                     Name = "テスト項目",
                     Prefix = "エビデンス_",
-                    ReferenceColumnHeader = "参考 No.",
                     NumberFormat = "D2",
                     Description = "Sheet test items với prefix エビデンス_"
                 }
@@ -201,6 +204,45 @@ namespace ExcelCustomAddin
       _extendedSheets = new List<SheetConfig>();
       _generalConfig = new GeneralConfig();
       _loggingConfig = new LoggingConfig();
+
+      // Tạo file XML mặc định
+      try
+      {
+        var doc = new XDocument(
+          new XElement("SheetConfiguration",
+            new XElement("SpecialSheets",
+              from sheet in _specialSheets
+              select new XElement("Sheet",
+                new XElement("Name", sheet.Name),
+                new XElement("Prefix", sheet.Prefix),
+                new XElement("NumberFormat", sheet.NumberFormat),
+                new XElement("Description", sheet.Description)
+              )
+            ),
+            new XElement("ExtendedSheets"),
+            new XElement("GeneralSettings",
+              new XElement("HeaderRowIndex", _generalConfig.HeaderRowIndex),
+              new XElement("AutoFillCell", _generalConfig.AutoFillCell),
+              new XElement("EnableDebugLog", _generalConfig.EnableDebugLog),
+              new XElement("StartingNumber", _generalConfig.StartingNumber)
+            ),
+            new XElement("LoggingSettings",
+              new XElement("LogDirectory", _loggingConfig.LogDirectory),
+              new XElement("EnableFileLogging", _loggingConfig.EnableFileLogging),
+              new XElement("EnableDebugOutput", _loggingConfig.EnableDebugOutput),
+              new XElement("LogLevel", _loggingConfig.LogLevel),
+              new XElement("LogFileName", _loggingConfig.LogFileName)
+            )
+          )
+        );
+
+        doc.Save(ConfigFilePath);
+      }
+      catch (Exception ex)
+      {
+        // Nếu không thể tạo file, chỉ log lỗi nhưng vẫn tiếp tục với config trong memory
+        System.Diagnostics.Debug.WriteLine($"Could not create default config file: {ex.Message}");
+      }
     }
 
     /// <summary>

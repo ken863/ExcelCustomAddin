@@ -45,6 +45,7 @@
             this.btnChangeSheetName = new System.Windows.Forms.ToolStripMenuItem();
             this.btnPinSheet = new System.Windows.Forms.ToolStripMenuItem();
             this.btnInsertMultipleImages = new System.Windows.Forms.Button();
+            this.chkInsertOnNewPage = new MetroFramework.Controls.MetroCheckBox();
             this.metroPanel1.SuspendLayout();
             this.toolStrip1.SuspendLayout();
             this.groupBox1.SuspendLayout();
@@ -96,13 +97,14 @@
             this.groupBox1.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this.groupBox1.BackColor = System.Drawing.Color.Transparent;
+            this.groupBox1.Controls.Add(this.chkInsertOnNewPage);
             this.groupBox1.Controls.Add(this.numScalePercent);
             this.groupBox1.Controls.Add(this.btnInsertPictures);
             this.groupBox1.Controls.Add(this.txtImagePath);
             this.groupBox1.Font = new System.Drawing.Font("Segoe UI Semibold", 9F, System.Drawing.FontStyle.Bold);
             this.groupBox1.Location = new System.Drawing.Point(4, 108);
             this.groupBox1.Name = "groupBox1";
-            this.groupBox1.Size = new System.Drawing.Size(417, 96);
+            this.groupBox1.Size = new System.Drawing.Size(417, 118);
             this.groupBox1.TabIndex = 19;
             this.groupBox1.TabStop = false;
             this.groupBox1.Text = "Insert multiple images";
@@ -202,9 +204,9 @@
             this.listofSheet.FullRowSelect = true;
             this.listofSheet.HeaderStyle = System.Windows.Forms.ColumnHeaderStyle.None;
             this.listofSheet.HideSelection = false;
-            this.listofSheet.Location = new System.Drawing.Point(3, 210);
+            this.listofSheet.Location = new System.Drawing.Point(3, 232);
             this.listofSheet.Name = "listofSheet";
-            this.listofSheet.Size = new System.Drawing.Size(418, 585);
+            this.listofSheet.Size = new System.Drawing.Size(418, 563);
             this.listofSheet.TabIndex = 13;
             this.listofSheet.UseCompatibleStateImageBehavior = false;
             this.listofSheet.View = System.Windows.Forms.View.Details;
@@ -240,6 +242,16 @@
             this.btnInsertMultipleImages.Size = new System.Drawing.Size(75, 23);
             this.btnInsertMultipleImages.TabIndex = 0;
             // 
+            // chkInsertOnNewPage
+            // 
+            this.chkInsertOnNewPage.AutoSize = true;
+            this.chkInsertOnNewPage.Location = new System.Drawing.Point(6, 96);
+            this.chkInsertOnNewPage.Name = "chkInsertOnNewPage";
+            this.chkInsertOnNewPage.Size = new System.Drawing.Size(127, 15);
+            this.chkInsertOnNewPage.TabIndex = 4;
+            this.chkInsertOnNewPage.Text = "Insert On New Page";
+            this.chkInsertOnNewPage.UseVisualStyleBackColor = true;
+            // 
             // ActionPanelControl
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -252,6 +264,7 @@
             this.toolStrip1.ResumeLayout(false);
             this.toolStrip1.PerformLayout();
             this.groupBox1.ResumeLayout(false);
+            this.groupBox1.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this.numScalePercent)).EndInit();
             this.contextMenuStrip1.ResumeLayout(false);
             this.ResumeLayout(false);
@@ -275,5 +288,6 @@
         public System.Windows.Forms.NumericUpDown numScalePercent;
         private System.Windows.Forms.ToolStrip toolStrip1;
         public System.Windows.Forms.ToolStripLabel toolStripFilePath;
+        public MetroFramework.Controls.MetroCheckBox chkInsertOnNewPage;
     }
 }

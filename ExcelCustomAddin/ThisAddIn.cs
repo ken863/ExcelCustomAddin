@@ -178,11 +178,49 @@
                 int errorCount = 0;
                 double maxBottomPosition = topLocation; // Theo dõi vị trí thấp nhất của hình ảnh
 
+                // Kiểm tra checkbox "Insert On New Page"
+                bool insertOnNewPage = _actionPanel.chkInsertOnNewPage.Checked;
+                Logger.Info($"Insert on new page mode: {insertOnNewPage}");
+
+                // Nếu chọn chèn vào trang mới, điều chỉnh vị trí bắt đầu tại row 2
+                if (insertOnNewPage)
+                {
+                    Range row2Cell = activeSheet.Cells[activeCell.Row + 1, activeCell.Column];
+                    topLocation = (double)row2Cell.Top;
+                    leftLocation = (double)row2Cell.Left;
+                    Logger.Debug($"Insert on new page mode: starting at row {activeCell.Row + 1}");
+                }
+
                 // Chèn từng hình ảnh
                 foreach (string imagePath in imageFiles)
                 {
                     try
                     {
+                        // Nếu chọn chèn mỗi ảnh vào trang mới và đây không phải ảnh đầu tiên
+                        if (insertOnNewPage && insertedCount > 0)
+                        {
+                            // Chèn page break trước khi chèn ảnh mới
+                            try
+                            {
+                                // Chèn horizontal page break
+                                int rowForPageBreak = Math.Max(1, (int)Math.Ceiling(maxBottomPosition / activeCell.Height) + 2);
+                                Range breakRange = activeSheet.Cells[rowForPageBreak, 1];
+                                activeSheet.HPageBreaks.Add(breakRange);
+
+                                // Cập nhật vị trí cho ảnh mới (row 2 của trang mới)
+                                Range row2Cell = activeSheet.Cells[rowForPageBreak + 1, activeCell.Column]; // Row 2 của trang mới
+                                topLocation = (double)row2Cell.Top;
+                                leftLocation = (double)row2Cell.Left;
+
+                                Logger.Debug($"Added page break at row {rowForPageBreak}, image will be placed at row {rowForPageBreak + 1} for image {insertedCount + 1}");
+                            }
+                            catch (Exception pageBreakEx)
+                            {
+                                Logger.Warning($"Failed to add page break: {pageBreakEx.Message}");
+                                // Tiếp tục chèn ảnh mà không có page break
+                            }
+                        }
+
                         // Chèn hình ảnh vào sheet
                         var shape = activeSheet.Shapes.AddPicture(
                             imagePath,
@@ -199,10 +237,19 @@
                         shape.Height = (float)(shape.Height * resizeRate);
 
                         // Cập nhật vị trí cho hình ảnh tiếp theo
-                        topLocation += shape.Height + activeCell.Height;
+                        if (insertOnNewPage)
+                        {
+                            // Nếu chèn mỗi ảnh vào trang mới, không cần thay đổi topLocation
+                            // vì trang mới sẽ được tạo ở vòng lặp tiếp theo
+                        }
+                        else
+                        {
+                            // Chế độ bình thường: xếp ảnh theo chiều dọc
+                            topLocation += shape.Height + activeCell.Height;
+                        }
 
                         // Theo dõi vị trí thấp nhất
-                        maxBottomPosition = Math.Max(maxBottomPosition, topLocation);
+                        maxBottomPosition = Math.Max(maxBottomPosition, shape.Top + shape.Height);
 
                         insertedCount++;
 
@@ -263,7 +310,7 @@
 
                 // Log thông tin về cấu hình logging
                 var loggingConfig = SheetConfigManager.GetLoggingConfig();
-                Logger.Info($"Logger configured - Directory: {(string.IsNullOrEmpty(loggingConfig.LogDirectory) ? "Default C:\\ExcelAddinLogs" : loggingConfig.LogDirectory)}, File: {loggingConfig.LogFileName}, Debug: {loggingConfig.EnableDebugOutput}");
+                Logger.Info($"Logger configured - Directory: {(string.IsNullOrEmpty(loggingConfig.LogDirectory) ? "Default C:\\ExcelCustomAddin" : loggingConfig.LogDirectory)}, File: {loggingConfig.LogFileName}, Debug: {loggingConfig.EnableDebugOutput}");
                 Logger.Info($"Log file path: {Logger.GetLogFilePath()}");
 
                 // Thiết lập debug logging dựa trên cấu hình
@@ -995,8 +1042,8 @@
             newWs.Name = sheetName;
 
             // Đặt độ rộng cột sheet mới
-            newWs.Columns.ColumnWidth = 2.17;
-            newWs.Rows.RowHeight = 12.75; // Giảm chiều cao dòng để fit 48 dòng trên Windows
+            newWs.Columns.ColumnWidth = 1.86;
+            newWs.Rows.RowHeight = 12.6; // Giảm chiều cao dòng để fit 48 dòng trên Windows
 
             // Thiết lập font chữ cho toàn bộ sheet
             newWs.Cells.Font.Name = "MS PGothic";
@@ -1010,9 +1057,9 @@
             newWs.PageSetup.Orientation = XlPageOrientation.xlLandscape;
             newWs.PageSetup.PaperSize = XlPaperSize.xlPaperA4; // Thiết lập kích cỡ giấy A4
             newWs.PageSetup.PrintArea = "$A$1:$BC$48"; // Thiết lập vùng in từ A1 đến BC48
-            newWs.PageSetup.FitToPagesWide = 1; // Fit tất cả cột vào 1 trang theo chiều rộng
-            newWs.PageSetup.FitToPagesTall = 1; // Fit 48 dòng vào 1 trang theo chiều cao
-            newWs.PageSetup.Zoom = false; // Tắt zoom để sử dụng FitToPages
+            newWs.PageSetup.Zoom = 90; // Thiết lập scaling 90%
+            newWs.PageSetup.FitToPagesWide = false; // Tắt FitToPagesWide
+            newWs.PageSetup.FitToPagesTall = false; // Tắt FitToPagesTall
 
             // Thiết lập lề trang tối ưu cho Windows (đơn vị: inches)
             newWs.PageSetup.LeftMargin = newWs.Application.InchesToPoints(0.2);   // Lề trái nhỏ hơn
@@ -1307,9 +1354,9 @@
                 Logger.Debug("Set page orientation to Landscape (fixed for A1:BC format)");
 
                 // Thiết lập fit to page
-                worksheet.PageSetup.Zoom = false;
-                worksheet.PageSetup.FitToPagesWide = 1;
-                worksheet.PageSetup.FitToPagesTall = 1;
+                worksheet.PageSetup.Zoom = 90; // Thiết lập scaling 90%
+                worksheet.PageSetup.FitToPagesWide = false; // Tắt FitToPagesWide
+                worksheet.PageSetup.FitToPagesTall = false; // Tắt FitToPagesTall
 
                 // Thiết lập margins tối ưu cho hình ảnh với format A1:BC
                 worksheet.PageSetup.LeftMargin = worksheet.Application.InchesToPoints(0.2);

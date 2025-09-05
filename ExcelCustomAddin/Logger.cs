@@ -103,8 +103,8 @@ namespace ExcelCustomAddin
       }
       else
       {
-        // Sử dụng thư mục mặc định C:\ExcelAddinLogs
-        logDirectory = @"C:\ExcelAddinLogs";
+        // Sử dụng thư mục mặc định C:\ExcelCustomAddin
+        logDirectory = @"C:\ExcelCustomAddin";
       }
 
       // Tạo thư mục nếu chưa tồn tại
@@ -117,7 +117,7 @@ namespace ExcelCustomAddin
         }
         catch (Exception ex)
         {
-          // Nếu không thể tạo thư mục C:\ExcelAddinLogs, fallback về Temp
+          // Nếu không thể tạo thư mục C:\ExcelCustomAddin, fallback về Temp
           System.Diagnostics.Debug.WriteLine($"Failed to create log directory {logDirectory}: {ex.Message}");
           string tempPath = Path.GetTempPath();
           logDirectory = Path.Combine(tempPath, "ExcelCustomAddin");
