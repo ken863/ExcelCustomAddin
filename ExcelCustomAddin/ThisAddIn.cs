@@ -185,19 +185,32 @@
                 int insertedCount = 0;
                 int errorCount = 0;
                 double maxBottomPosition = position.Top;
+                double currentPageStartTop = position.Top; // Theo dõi vị trí bắt đầu của trang hiện tại
 
                 // Chèn từng hình ảnh
                 foreach (string imagePath in imageFiles)
                 {
                     try
                     {
-                        // Thêm page break nếu cần cho ảnh tiếp theo
+                        // Bước 1: Tải hình ảnh tạm thời để lấy chiều cao sau khi resize
+                        var tempShape = activeSheet.Shapes.AddPicture(
+                            imagePath,
+                            Microsoft.Office.Core.MsoTriState.msoFalse,
+                            Microsoft.Office.Core.MsoTriState.msoTrue,
+                            0, 0, -1, -1
+                        );
+                        tempShape.LockAspectRatio = Microsoft.Office.Core.MsoTriState.msoTrue;
+                        tempShape.Height = (float)(tempShape.Height * resizeRate);
+                        double imageHeight = tempShape.Height;
+                        tempShape.Delete(); // Xóa hình tạm
+
+                        // Bước 2: Kiểm tra và thêm page break nếu cần (dựa vào chiều cao hình sắp chèn)
                         if (insertOnNewPage && insertedCount > 0)
                         {
-                            AddPageBreakForNextImage(activeSheet, activeCell, ref position, maxBottomPosition, insertedCount + 1);
+                            AddPageBreakForNextImage(activeSheet, activeCell, ref position, ref currentPageStartTop, maxBottomPosition, insertedCount + 1, imageHeight);
                         }
 
-                        // Chèn hình ảnh vào sheet
+                        // Bước 3: Chèn hình ảnh vào vị trí đã tính toán
                         var shape = activeSheet.Shapes.AddPicture(
                             imagePath,
                             Microsoft.Office.Core.MsoTriState.msoFalse,
@@ -293,23 +306,44 @@
         }
 
         /// <summary>
-        /// Thêm page break cho hình ảnh tiếp theo
+        /// Thêm page break cho hình ảnh tiếp theo nếu cần thiết
         /// </summary>
-        private void AddPageBreakForNextImage(Worksheet activeSheet, Range activeCell, ref (double Top, double Left) position, double maxBottomPosition, int imageIndex)
+        private void AddPageBreakForNextImage(Worksheet activeSheet, Range activeCell, ref (double Top, double Left) position, ref double currentPageStartTop, double maxBottomPosition, int imageIndex, double nextImageHeight)
         {
             try
             {
-                // Chèn horizontal page break
-                int rowForPageBreak = Math.Max(1, (int)Math.Ceiling(maxBottomPosition / activeCell.Height) + 2);
-                Range breakRange = activeSheet.Cells[rowForPageBreak, 1];
-                activeSheet.HPageBreaks.Add(breakRange);
+                // Tính toán chiều cao của trang hiện tại (36 dòng)
+                double pageHeight = activeCell.Height * 36;
 
-                // Cập nhật vị trí cho ảnh mới tại row 2 của trang mới (cùng cột với cell ban đầu)
-                Range row2Cell = activeSheet.Cells[rowForPageBreak + 1, activeCell.Column];
-                position.Top = (double)row2Cell.Top;
-                position.Left = (double)row2Cell.Left;
+                // Tính toán chiều cao đã sử dụng trên trang hiện tại
+                double usedHeightOnCurrentPage = maxBottomPosition - currentPageStartTop;
 
-                Logger.Debug($"Added page break at row {rowForPageBreak}, image {imageIndex} will be placed at row {rowForPageBreak + 1} (row 2 of new page)");
+                // Tính toán chiều cao sẽ sử dụng nếu chèn hình tiếp theo (bao gồm khoảng cách giữa các hình)
+                double nextImageHeightWithSpacing = nextImageHeight + activeCell.Height;
+
+                // Kiểm tra xem có cần tạo page break không
+                // Tạo page break nếu: chiều cao đã dùng + chiều cao hình tiếp theo > 36 dòng
+                if (usedHeightOnCurrentPage + nextImageHeightWithSpacing > pageHeight)
+                {
+                    // Chèn horizontal page break
+                    int rowForPageBreak = Math.Max(1, (int)Math.Ceiling(maxBottomPosition / activeCell.Height) + 2);
+                    Range breakRange = activeSheet.Cells[rowForPageBreak, 1];
+                    activeSheet.HPageBreaks.Add(breakRange);
+
+                    // Cập nhật vị trí cho ảnh mới tại row 2 của trang mới (cùng cột với cell ban đầu)
+                    Range row2Cell = activeSheet.Cells[rowForPageBreak + 1, activeCell.Column];
+                    position.Top = (double)row2Cell.Top;
+                    position.Left = (double)row2Cell.Left;
+
+                    // Cập nhật vị trí bắt đầu của trang mới
+                    currentPageStartTop = position.Top;
+
+                    Logger.Debug($"Added page break at row {rowForPageBreak}, image {imageIndex} will be placed at row {rowForPageBreak + 1} (row 2 of new page). Used height: {usedHeightOnCurrentPage:F1}, Next image height: {nextImageHeight:F1}, Total would be: {usedHeightOnCurrentPage + nextImageHeightWithSpacing:F1}, Page height: {pageHeight:F1}");
+                }
+                else
+                {
+                    Logger.Debug($"No page break needed for image {imageIndex}. Used height: {usedHeightOnCurrentPage:F1}, Next image height: {nextImageHeight:F1}, Total: {usedHeightOnCurrentPage + nextImageHeightWithSpacing:F1} / Page height: {pageHeight:F1}. Images will fit on current page.");
+                }
             }
             catch (Exception pageBreakEx)
             {
@@ -323,16 +357,11 @@
         /// </summary>
         private void UpdatePositionForNextImage(Worksheet activeSheet, Range activeCell, ref (double Top, double Left) position, Microsoft.Office.Interop.Excel.Shape shape, bool insertOnNewPage)
         {
-            if (insertOnNewPage)
-            {
-                // Nếu chèn mỗi ảnh vào trang mới, không cần thay đổi vị trí
-                // vì trang mới sẽ được tạo ở vòng lặp tiếp theo
-            }
-            else
-            {
-                // Chế độ bình thường: xếp ảnh theo chiều dọc
-                position.Top += shape.Height + activeCell.Height;
-            }
+            // Luôn cập nhật vị trí cho hình ảnh tiếp theo (xếp theo chiều dọc)
+            // Page break sẽ được xử lý riêng trong AddPageBreakForNextImage
+            position.Top += shape.Height + activeCell.Height;
+
+            Logger.Debug($"Updated position for next image: Top={position.Top:F1}, Left={position.Left:F1}");
         }
 
         /// <summary>

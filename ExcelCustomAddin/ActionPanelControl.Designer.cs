@@ -34,6 +34,7 @@
             this.toolStrip1 = new System.Windows.Forms.ToolStrip();
             this.toolStripFilePath = new System.Windows.Forms.ToolStripLabel();
             this.groupBox1 = new System.Windows.Forms.GroupBox();
+            this.chkInsertOnNewPage = new MetroFramework.Controls.MetroCheckBox();
             this.numScalePercent = new System.Windows.Forms.NumericUpDown();
             this.btnInsertPictures = new System.Windows.Forms.Button();
             this.txtImagePath = new MetroFramework.Controls.MetroTextBox();
@@ -45,7 +46,6 @@
             this.btnChangeSheetName = new System.Windows.Forms.ToolStripMenuItem();
             this.btnPinSheet = new System.Windows.Forms.ToolStripMenuItem();
             this.btnInsertMultipleImages = new System.Windows.Forms.Button();
-            this.chkInsertOnNewPage = new MetroFramework.Controls.MetroCheckBox();
             this.metroPanel1.SuspendLayout();
             this.toolStrip1.SuspendLayout();
             this.groupBox1.SuspendLayout();
@@ -108,6 +108,18 @@
             this.groupBox1.TabIndex = 19;
             this.groupBox1.TabStop = false;
             this.groupBox1.Text = "Insert multiple images";
+            // 
+            // chkInsertOnNewPage
+            // 
+            this.chkInsertOnNewPage.AutoSize = true;
+            this.chkInsertOnNewPage.Checked = true;
+            this.chkInsertOnNewPage.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.chkInsertOnNewPage.Location = new System.Drawing.Point(6, 96);
+            this.chkInsertOnNewPage.Name = "chkInsertOnNewPage";
+            this.chkInsertOnNewPage.Size = new System.Drawing.Size(127, 15);
+            this.chkInsertOnNewPage.TabIndex = 4;
+            this.chkInsertOnNewPage.Text = "Insert On New Page";
+            this.chkInsertOnNewPage.UseVisualStyleBackColor = true;
             // 
             // numScalePercent
             // 
@@ -241,16 +253,6 @@
             this.btnInsertMultipleImages.Name = "btnInsertMultipleImages";
             this.btnInsertMultipleImages.Size = new System.Drawing.Size(75, 23);
             this.btnInsertMultipleImages.TabIndex = 0;
-            // 
-            // chkInsertOnNewPage
-            // 
-            this.chkInsertOnNewPage.AutoSize = true;
-            this.chkInsertOnNewPage.Location = new System.Drawing.Point(6, 96);
-            this.chkInsertOnNewPage.Name = "chkInsertOnNewPage";
-            this.chkInsertOnNewPage.Size = new System.Drawing.Size(127, 15);
-            this.chkInsertOnNewPage.TabIndex = 4;
-            this.chkInsertOnNewPage.Text = "Insert On New Page";
-            this.chkInsertOnNewPage.UseVisualStyleBackColor = true;
             // 
             // ActionPanelControl
             // 
