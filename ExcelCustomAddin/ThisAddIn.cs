@@ -101,6 +101,11 @@
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
+        /// <summary>
+        /// Xử lý sự kiện chèn nhiều hình ảnh
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void InsertMultipleImages(object sender, EventArgs e)
         {
             try
@@ -170,55 +175,26 @@
                     return;
                 }
 
-                // Lấy vị trí bắt đầu từ cell hiện tại
-                double topLocation = (double)activeCell.Top;
-                double leftLocation = (double)activeCell.Left;
-                double resizeRate = (double)(_actionPanel.numScalePercent.Value / 100); // Tỷ lệ thu nhỏ hình ảnh
-                int insertedCount = 0;
-                int errorCount = 0;
-                double maxBottomPosition = topLocation; // Theo dõi vị trí thấp nhất của hình ảnh
-
-                // Kiểm tra checkbox "Insert On New Page"
+                // Khởi tạo các biến cần thiết
+                double resizeRate = (double)(_actionPanel.numScalePercent.Value / 100);
                 bool insertOnNewPage = _actionPanel.chkInsertOnNewPage.Checked;
                 Logger.Info($"Insert on new page mode: {insertOnNewPage}");
 
-                // Nếu chọn chèn vào trang mới, điều chỉnh vị trí bắt đầu tại row 2
-                if (insertOnNewPage)
-                {
-                    Range row2Cell = activeSheet.Cells[activeCell.Row + 1, activeCell.Column];
-                    topLocation = (double)row2Cell.Top;
-                    leftLocation = (double)row2Cell.Left;
-                    Logger.Debug($"Insert on new page mode: starting at row {activeCell.Row + 1}");
-                }
+                // Tính toán vị trí bắt đầu
+                var position = CalculateInitialImagePosition(activeSheet, activeCell, insertOnNewPage);
+                int insertedCount = 0;
+                int errorCount = 0;
+                double maxBottomPosition = position.Top;
 
                 // Chèn từng hình ảnh
                 foreach (string imagePath in imageFiles)
                 {
                     try
                     {
-                        // Nếu chọn chèn mỗi ảnh vào trang mới và đây không phải ảnh đầu tiên
+                        // Thêm page break nếu cần cho ảnh tiếp theo
                         if (insertOnNewPage && insertedCount > 0)
                         {
-                            // Chèn page break trước khi chèn ảnh mới
-                            try
-                            {
-                                // Chèn horizontal page break
-                                int rowForPageBreak = Math.Max(1, (int)Math.Ceiling(maxBottomPosition / activeCell.Height) + 2);
-                                Range breakRange = activeSheet.Cells[rowForPageBreak, 1];
-                                activeSheet.HPageBreaks.Add(breakRange);
-
-                                // Cập nhật vị trí cho ảnh mới (row 2 của trang mới)
-                                Range row2Cell = activeSheet.Cells[rowForPageBreak + 1, activeCell.Column]; // Row 2 của trang mới
-                                topLocation = (double)row2Cell.Top;
-                                leftLocation = (double)row2Cell.Left;
-
-                                Logger.Debug($"Added page break at row {rowForPageBreak}, image will be placed at row {rowForPageBreak + 1} for image {insertedCount + 1}");
-                            }
-                            catch (Exception pageBreakEx)
-                            {
-                                Logger.Warning($"Failed to add page break: {pageBreakEx.Message}");
-                                // Tiếp tục chèn ảnh mà không có page break
-                            }
+                            AddPageBreakForNextImage(activeSheet, activeCell, ref position, maxBottomPosition, insertedCount + 1);
                         }
 
                         // Chèn hình ảnh vào sheet
@@ -226,8 +202,8 @@
                             imagePath,
                             Microsoft.Office.Core.MsoTriState.msoFalse,
                             Microsoft.Office.Core.MsoTriState.msoTrue,
-                            (float)leftLocation,
-                            (float)topLocation,
+                            (float)position.Left,
+                            (float)position.Top,
                             -1, // Width - tự động
                             -1  // Height - tự động
                         );
@@ -237,16 +213,7 @@
                         shape.Height = (float)(shape.Height * resizeRate);
 
                         // Cập nhật vị trí cho hình ảnh tiếp theo
-                        if (insertOnNewPage)
-                        {
-                            // Nếu chèn mỗi ảnh vào trang mới, không cần thay đổi topLocation
-                            // vì trang mới sẽ được tạo ở vòng lặp tiếp theo
-                        }
-                        else
-                        {
-                            // Chế độ bình thường: xếp ảnh theo chiều dọc
-                            topLocation += shape.Height + activeCell.Height;
-                        }
+                        UpdatePositionForNextImage(activeSheet, activeCell, ref position, shape, insertOnNewPage);
 
                         // Theo dõi vị trí thấp nhất
                         maxBottomPosition = Math.Max(maxBottomPosition, shape.Top + shape.Height);
@@ -285,11 +252,86 @@
                         Logger.Warning($"Failed to adjust print area: {ex.Message}");
                     }
                 }
+
+                // Hiển thị thông báo kết quả
+                if (insertedCount > 0 || errorCount > 0)
+                {
+                    string resultMessage = $"Đã chèn thành công {insertedCount} hình ảnh";
+                    if (insertOnNewPage && insertedCount > 1)
+                    {
+                        resultMessage += " (mỗi ảnh trên một trang riêng)";
+                    }
+
+                    if (errorCount > 0)
+                    {
+                        resultMessage += $"\nCó {errorCount} lỗi khi chèn hình ảnh.";
+                    }
+
+                    Logger.Info(resultMessage);
+                    MessageBox.Show(resultMessage, "Hoàn thành", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
             }
             catch (Exception ex)
             {
                 Logger.Error($"Có lỗi xảy ra khi chèn hình ảnh: {ex.Message}", ex);
                 MessageBox.Show($"Có lỗi xảy ra khi chèn hình ảnh: {ex.Message}", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        /// <summary>
+        /// Tính toán vị trí ban đầu để chèn hình ảnh
+        /// </summary>
+        private (double Top, double Left) CalculateInitialImagePosition(Worksheet activeSheet, Range activeCell, bool insertOnNewPage)
+        {
+            // Luôn chèn hình ảnh đầu tiên tại chính cell đang chọn
+            double topLocation = (double)activeCell.Top;
+            double leftLocation = (double)activeCell.Left;
+
+            Logger.Debug($"Insert first image at cell {activeCell.Address[false, false]} (Row: {activeCell.Row}, Column: {activeCell.Column})");
+
+            return (topLocation, leftLocation);
+        }
+
+        /// <summary>
+        /// Thêm page break cho hình ảnh tiếp theo
+        /// </summary>
+        private void AddPageBreakForNextImage(Worksheet activeSheet, Range activeCell, ref (double Top, double Left) position, double maxBottomPosition, int imageIndex)
+        {
+            try
+            {
+                // Chèn horizontal page break
+                int rowForPageBreak = Math.Max(1, (int)Math.Ceiling(maxBottomPosition / activeCell.Height) + 2);
+                Range breakRange = activeSheet.Cells[rowForPageBreak, 1];
+                activeSheet.HPageBreaks.Add(breakRange);
+
+                // Cập nhật vị trí cho ảnh mới tại row 2 của trang mới (cùng cột với cell ban đầu)
+                Range row2Cell = activeSheet.Cells[rowForPageBreak + 1, activeCell.Column];
+                position.Top = (double)row2Cell.Top;
+                position.Left = (double)row2Cell.Left;
+
+                Logger.Debug($"Added page break at row {rowForPageBreak}, image {imageIndex} will be placed at row {rowForPageBreak + 1} (row 2 of new page)");
+            }
+            catch (Exception pageBreakEx)
+            {
+                Logger.Warning($"Failed to add page break: {pageBreakEx.Message}");
+                // Tiếp tục chèn ảnh mà không có page break
+            }
+        }
+
+        /// <summary>
+        /// Cập nhật vị trí cho hình ảnh tiếp theo
+        /// </summary>
+        private void UpdatePositionForNextImage(Worksheet activeSheet, Range activeCell, ref (double Top, double Left) position, Microsoft.Office.Interop.Excel.Shape shape, bool insertOnNewPage)
+        {
+            if (insertOnNewPage)
+            {
+                // Nếu chèn mỗi ảnh vào trang mới, không cần thay đổi vị trí
+                // vì trang mới sẽ được tạo ở vòng lặp tiếp theo
+            }
+            else
+            {
+                // Chế độ bình thường: xếp ảnh theo chiều dọc
+                position.Top += shape.Height + activeCell.Height;
             }
         }
 
@@ -916,21 +958,28 @@
                             // Nếu sheet đã tồn tại, tạo hyperlink đến sheet đó và cập nhật nút back
                             activeSheet.Hyperlinks.Add(cell, "", $"'{newSheetName}'!A1", Type.Missing, newSheetName);
 
+                            // Thiết lập font MS PGothic cho hyperlink cell
+                            cell.Font.Name = "MS PGothic";
+
                             // Đặt giá trị "Back" vào ô A1 của sheet đã tồn tại
-                            existingSheet.Cells[1, 1].Value2 = "戻る";
+                            int aColumnIndex = GetColumnIndex("A"); // A = 1
+                            existingSheet.Cells[1, aColumnIndex].Value2 = "<Back";
 
                             // Xóa hyperlink cũ nếu có
                             try
                             {
-                                if (existingSheet.Cells[1, 1].Hyperlinks.Count > 0)
+                                if (existingSheet.Cells[1, aColumnIndex].Hyperlinks.Count > 0)
                                 {
-                                    existingSheet.Cells[1, 1].Hyperlinks.Delete();
+                                    existingSheet.Cells[1, aColumnIndex].Hyperlinks.Delete();
                                 }
                             }
                             catch { }
 
                             // Tạo hyperlink "Back" từ ô A1 của sheet đã tồn tại về ô gốc
-                            existingSheet.Hyperlinks.Add(existingSheet.Cells[1, 1], "", $"'{activeSheet.Name}'!{cell.Address[false, false]}", Type.Missing, "戻る");
+                            existingSheet.Hyperlinks.Add(existingSheet.Cells[1, aColumnIndex], "", $"'{activeSheet.Name}'!{cell.Address[false, false]}", Type.Missing, "<Back");
+
+                            // Thiết lập font MS PGothic cho Back hyperlink cell
+                            existingSheet.Cells[1, aColumnIndex].Font.Name = "MS PGothic";
 
                             existingSheets.Add(newSheetName);
                             continue;
@@ -942,11 +991,20 @@
                         // Tạo hyperlink từ ô hiện tại đến sheet mới
                         activeSheet.Hyperlinks.Add(cell, "", $"'{newSheetName}'!A1", Type.Missing, newSheetName);
 
+                        // Thiết lập font MS PGothic cho hyperlink cell
+                        cell.Font.Name = "MS PGothic";
+
                         // Đặt giá trị "Back" vào ô A1 của sheet mới trước khi tạo hyperlink
-                        newWs.Cells[1, 1].Value2 = "戻る";
+                        int aColumnIndexNew = GetColumnIndex("A"); // A = 1
+                        newWs.Cells[1, aColumnIndexNew].Value2 = "<Back";
 
                         // Tạo hyperlink "Back" từ ô A1 của sheet mới về ô gốc
-                        newWs.Hyperlinks.Add(newWs.Cells[1, 1], "", $"'{activeSheet.Name}'!{cell.Address[false, false]}", Type.Missing, "戻る"); createdSheets.Add(newSheetName);
+                        newWs.Hyperlinks.Add(newWs.Cells[1, aColumnIndexNew], "", $"'{activeSheet.Name}'!{cell.Address[false, false]}", Type.Missing, "<Back");
+
+                        // Thiết lập font MS PGothic cho Back hyperlink cell
+                        newWs.Cells[1, aColumnIndexNew].Font.Name = "MS PGothic";
+
+                        createdSheets.Add(newSheetName);
                     }
                     catch (Exception ex)
                     {
@@ -1041,35 +1099,56 @@
             Worksheet newWs = activeWorkbook.Worksheets.Add(Type.Missing, activeWorkbook.Worksheets[activeWorkbook.Worksheets.Count]);
             newWs.Name = sheetName;
 
-            // Đặt độ rộng cột sheet mới
-            newWs.Columns.ColumnWidth = 1.86;
-            newWs.Rows.RowHeight = 12.6; // Giảm chiều cao dòng để fit 48 dòng trên Windows
+            // Đặt độ rộng cột sheet mới để page break tại cột AZ
+            // Tính toán: A4 Landscape = 11.69 inches chiều rộng
+            // Trừ margins (0.75 + 0.75 = 1.5 inches) = 10.19 inches khả dụng
+            // Cần điều chỉnh để fit đúng 52 cột (A-AZ) trên một trang
+            // Giảm column width để fit nhiều cột hơn trên một trang
+            newWs.Columns.ColumnWidth = 1.71;
+            newWs.Rows.RowHeight = 12.6; // Giảm chiều cao dòng để fit 36 dòng trên Windows
 
             // Thiết lập font chữ cho toàn bộ sheet
             newWs.Cells.Font.Name = "MS PGothic";
-            newWs.Cells.Font.Size = 9; // Giảm font size để fit 48 dòng trên Windows
+            newWs.Cells.Font.Size = 11; // Giảm font size để fit 36 dòng trên Windows
 
-            // Thiết lập used range tới cột BC (cột 55)
-            // Đặt giá trị vào ô BC1 để mở rộng used range
-            newWs.Cells[1, 55].Value2 = " ";
+            // Thiết lập used range tới cột AZ (cột 52)
+            // Đặt giá trị vào ô AZ1 để mở rộng used range
+            int azColumnIndex = GetColumnIndex("AZ"); // AZ = 52
+            newWs.Cells[1, azColumnIndex].Value2 = " ";
 
-            // Thiết lập trang in với định hướng ngang và lề trang tới cột BC
+            // Thiết lập trang in với định hướng ngang và lề trang tới cột AZ
             newWs.PageSetup.Orientation = XlPageOrientation.xlLandscape;
             newWs.PageSetup.PaperSize = XlPaperSize.xlPaperA4; // Thiết lập kích cỡ giấy A4
-            newWs.PageSetup.PrintArea = "$A$1:$BC$48"; // Thiết lập vùng in từ A1 đến BC48
-            newWs.PageSetup.Zoom = 90; // Thiết lập scaling 90%
+            newWs.PageSetup.PrintArea = "$A$1:$AZ$36"; // Thiết lập vùng in từ A1 đến AZ36
+            newWs.PageSetup.Zoom = 100; // Thiết lập scaling 100%
             newWs.PageSetup.FitToPagesWide = false; // Tắt FitToPagesWide
             newWs.PageSetup.FitToPagesTall = false; // Tắt FitToPagesTall
 
             // Thiết lập lề trang tối ưu cho Windows (đơn vị: inches)
-            newWs.PageSetup.LeftMargin = newWs.Application.InchesToPoints(0.2);   // Lề trái nhỏ hơn
-            newWs.PageSetup.RightMargin = newWs.Application.InchesToPoints(0.2);  // Lề phải nhỏ hơn
-            newWs.PageSetup.TopMargin = newWs.Application.InchesToPoints(0.2);    // Lề trên nhỏ hơn
-            newWs.PageSetup.BottomMargin = newWs.Application.InchesToPoints(0.2); // Lề dưới nhỏ hơn
-            newWs.PageSetup.HeaderMargin = newWs.Application.InchesToPoints(0.05); // Lề header nhỏ hơn
-            newWs.PageSetup.FooterMargin = newWs.Application.InchesToPoints(0.05); // Lề footer nhỏ hơn
+            newWs.PageSetup.LeftMargin = newWs.Application.InchesToPoints(0.75);   // Lề trái
+            newWs.PageSetup.RightMargin = newWs.Application.InchesToPoints(0.75);  // Lề phải
+            newWs.PageSetup.TopMargin = newWs.Application.InchesToPoints(1);       // Lề trên
+            newWs.PageSetup.BottomMargin = newWs.Application.InchesToPoints(0.75); // Lề dưới
+            newWs.PageSetup.HeaderMargin = newWs.Application.InchesToPoints(0.5);  // Lề header
+            newWs.PageSetup.FooterMargin = newWs.Application.InchesToPoints(0.5);  // Lề footer
 
-            // Thiết lập view mode thành Page Break Preview
+            // Thiết lập center on page theo chiều horizontal
+            newWs.PageSetup.CenterHorizontally = true;
+
+            // Thiết lập vertical page break tại cột BA (sau cột AZ=52)
+            // Điều này đảm bảo page break xảy ra đúng tại cột AZ
+            try
+            {
+                // Thêm vertical page break tại cột BA (cột 53, ngay sau AZ)
+                int baColumnIndex = GetColumnIndex("BA"); // BA = 53
+                Range pageBreakCell = newWs.Cells[1, baColumnIndex]; // Cột BA
+                newWs.VPageBreaks.Add(pageBreakCell);
+                Logger.Debug("Added vertical page break at column BA (after AZ)");
+            }
+            catch (Exception pageBreakEx)
+            {
+                Logger.Warning($"Error setting vertical page break: {pageBreakEx.Message}");
+            }            // Thiết lập view mode thành Page Break Preview
             try
             {
                 var window = newWs.Application.ActiveWindow;
@@ -1099,8 +1178,9 @@
         {
             try
             {
-                // Đặt giá trị "戻る" (Back) vào ô A1 của sheet đích
-                Range backCell = targetSheet.Cells[1, 1];
+                // Đặt giá trị "<Back" (Back) vào ô A1 của sheet đích
+                int aColumnIndex = GetColumnIndex("A"); // A = 1
+                Range backCell = targetSheet.Cells[1, aColumnIndex];
 
                 // Xóa hyperlink cũ nếu có
                 try
@@ -1116,7 +1196,7 @@
                 }
 
                 // Cập nhật giá trị và định dạng cell
-                backCell.Value2 = "戻る";
+                backCell.Value2 = "<Back";
 
                 // Định dạng cell chứa nút Back
                 backCell.Font.Name = "MS PGothic";
@@ -1136,7 +1216,10 @@
 
                 // Tạo hyperlink "Back" từ ô A1 của sheet đích về ô gốc
                 string sourceAddress = $"'{sourceSheet.Name}'!{sourceCell.Address[false, false]}";
-                targetSheet.Hyperlinks.Add(backCell, "", sourceAddress, Type.Missing, "戻る");
+                targetSheet.Hyperlinks.Add(backCell, "", sourceAddress, Type.Missing, "<Back");
+
+                // Đảm bảo font MS PGothic cho Back hyperlink cell (đã set ở trên nhưng đảm bảo)
+                backCell.Font.Name = "MS PGothic";
 
                 // Cập nhật hoặc thêm comment/note cho cell Back
                 try
@@ -1157,7 +1240,8 @@
                 }
 
                 // Cập nhật title cho sheet ở ô B1 (chỉ nếu chưa có hoặc cần cập nhật)
-                Range titleCell = targetSheet.Cells[1, 2];
+                int bColumnIndex = GetColumnIndex("B"); // B = 2
+                Range titleCell = targetSheet.Cells[1, bColumnIndex];
                 if (titleCell.Value2 == null || string.IsNullOrEmpty(titleCell.Value2.ToString()) ||
                     !titleCell.Value2.ToString().StartsWith("Evidence:"))
                 {
@@ -1177,16 +1261,21 @@
                 // Fallback: tạo hyperlink đơn giản nếu có lỗi
                 try
                 {
-                    Range fallbackCell = targetSheet.Cells[1, 1];
+                    int aColumnIndex = GetColumnIndex("A"); // A = 1
+                    Range fallbackCell = targetSheet.Cells[1, aColumnIndex];
                     // Xóa hyperlink cũ nếu có
                     if (fallbackCell.Hyperlinks.Count > 0)
                     {
                         fallbackCell.Hyperlinks.Delete();
                     }
 
-                    fallbackCell.Value2 = "戻る";
+                    fallbackCell.Value2 = "<Back";
                     string sourceAddress = $"'{sourceSheet.Name}'!{sourceCell.Address[false, false]}";
-                    targetSheet.Hyperlinks.Add(fallbackCell, "", sourceAddress, Type.Missing, "戻る");
+                    targetSheet.Hyperlinks.Add(fallbackCell, "", sourceAddress, Type.Missing, "<Back");
+
+                    // Thiết lập font MS PGothic cho fallback Back hyperlink cell
+                    fallbackCell.Font.Name = "MS PGothic";
+
                     Logger.Info("Fallback back button created successfully");
                 }
                 catch (Exception fallbackEx)
@@ -1250,6 +1339,8 @@
                 int endColumn = 1;
                 int endRow = 1;
 
+                int aColumnIndex = GetColumnIndex("A");
+
                 try
                 {
                     // Tìm cell chứa góc trên-trái của vùng hình ảnh
@@ -1276,8 +1367,8 @@
                         Logger.Debug("Using fallback calculation method");
 
                         // Lấy kích thước cell thực tế từ worksheet
-                        double actualCellWidth = (double)worksheet.Cells[1, 1].Width;
-                        double actualCellHeight = (double)worksheet.Cells[1, 1].Height;
+                        double actualCellWidth = (double)worksheet.Cells[1, aColumnIndex].Width;
+                        double actualCellHeight = (double)worksheet.Cells[1, aColumnIndex].Height;
 
                         Logger.Debug($"Actual cell dimensions: Width={actualCellWidth:F1}, Height={actualCellHeight:F1}");
 
@@ -1320,49 +1411,58 @@
                     }
                 }
 
-                // Cố định vùng in từ A1 đến BC theo chiều cao của hình ảnh
-                startColumn = 1; // Luôn bắt đầu từ cột A
+                // Cố định vùng in từ A1 đến AZ theo chiều cao của hình ảnh
+                int azColumnIndex = GetColumnIndex("AZ"); // AZ = 52
+
+                startColumn = aColumnIndex; // Luôn bắt đầu từ cột A
                 startRow = 1;    // Luôn bắt đầu từ dòng 1
-                endColumn = 55;  // Cố định đến cột BC
+                endColumn = azColumnIndex;  // Cố định đến cột AZ (A=1, Z=26, AA=27, AZ=52)
 
                 // Tính toán endRow dựa trên vị trí thấp nhất của hình ảnh
                 if (maxBottom > 0)
                 {
                     // Lấy kích thước cell thực tế để tính toán dòng cuối
-                    double actualCellHeight = (double)worksheet.Cells[1, 1].Height;
-                    endRow = Math.Max(48, (int)(maxBottom / actualCellHeight) + 1); // Tối thiểu 48 dòng, chỉ thêm 1 dòng buffer
+                    double actualCellHeight = (double)worksheet.Cells[1, aColumnIndex].Height;
+                    endRow = Math.Max(36, (int)(maxBottom / actualCellHeight) + 1); // Tối thiểu 36 dòng, chỉ thêm 1 dòng buffer
                     Logger.Debug($"Calculated endRow based on image bottom: {endRow} (maxBottom={maxBottom:F1}, cellHeight={actualCellHeight:F1})");
                 }
                 else
                 {
-                    endRow = 48; // Mặc định 48 dòng như evidence sheet
+                    endRow = 36; // Mặc định 36 dòng như evidence sheet
                 }
 
                 // Đảm bảo không vượt quá giới hạn worksheet
                 endRow = Math.Min(endRow, worksheet.Rows.Count);
 
-                Logger.Debug($"Fixed print area bounds: A1:BC{endRow} (Column 1-{endColumn}, Row 1-{endRow})");
+                Logger.Debug($"Fixed print area bounds: A1:AZ{endRow} (Column {startColumn}-{endColumn}, Row 1-{endRow})");
 
-                // Tạo print area mới với định dạng cố định A1:BC{endRow}
-                string newPrintArea = $"$A$1:$BC${endRow}";
+                // Tạo print area mới với định dạng cố định A1:AZ{endRow}
+                string newPrintArea = $"$A$1:$AZ${endRow}";
                 worksheet.PageSetup.PrintArea = newPrintArea;
 
-                Logger.Info($"Print area updated to: {newPrintArea} (covers {imageCount} images, fixed width A-BC)");
+                Logger.Info($"Print area updated to: {newPrintArea} (covers {imageCount} images, fixed width A-AZ)");
 
-                // Với print area cố định A1:BC, luôn sử dụng Landscape orientation
+                // Với print area cố định A1:AZ, luôn sử dụng Landscape orientation
                 worksheet.PageSetup.Orientation = XlPageOrientation.xlLandscape;
-                Logger.Debug("Set page orientation to Landscape (fixed for A1:BC format)");
+                Logger.Debug("Set page orientation to Landscape (fixed for A1:AZ format)");
 
                 // Thiết lập fit to page
-                worksheet.PageSetup.Zoom = 90; // Thiết lập scaling 90%
+                worksheet.PageSetup.Zoom = 100; // Thiết lập scaling 100%
                 worksheet.PageSetup.FitToPagesWide = false; // Tắt FitToPagesWide
                 worksheet.PageSetup.FitToPagesTall = false; // Tắt FitToPagesTall
 
-                // Thiết lập margins tối ưu cho hình ảnh với format A1:BC
-                worksheet.PageSetup.LeftMargin = worksheet.Application.InchesToPoints(0.2);
-                worksheet.PageSetup.RightMargin = worksheet.Application.InchesToPoints(0.2);
-                worksheet.PageSetup.TopMargin = worksheet.Application.InchesToPoints(0.2);
-                worksheet.PageSetup.BottomMargin = worksheet.Application.InchesToPoints(0.2);
+                // Thiết lập margins tối ưu cho hình ảnh với format A1:AZ
+                worksheet.PageSetup.LeftMargin = worksheet.Application.InchesToPoints(0.75);
+                worksheet.PageSetup.RightMargin = worksheet.Application.InchesToPoints(0.75);
+                worksheet.PageSetup.TopMargin = worksheet.Application.InchesToPoints(1);
+                worksheet.PageSetup.BottomMargin = worksheet.Application.InchesToPoints(0.75);
+
+                // Thiết lập center on page theo chiều horizontal
+                worksheet.PageSetup.CenterHorizontally = true;
+
+                // Thiết lập kích cỡ trang A4
+                worksheet.PageSetup.PaperSize = XlPaperSize.xlPaperA4;
+                Logger.Debug("Set paper size to A4 for A1:AZ print area");
             }
             catch (Exception ex)
             {
@@ -1386,6 +1486,35 @@
                 columnNumber /= 26;
             }
             return columnLetter;
+        }
+
+        /// <summary>
+        /// Chuyển đổi chữ cái cột thành số (A=1, B=2, ..., Z=26, AA=27, AB=28, ..., AZ=52, BA=53, ...)
+        /// </summary>
+        /// <param name="columnLetter">Chữ cái cột (A, B, C, ..., AA, AB, ...)</param>
+        /// <returns>Số cột (1-based)</returns>
+        private int GetColumnIndex(string columnLetter)
+        {
+            if (string.IsNullOrEmpty(columnLetter))
+            {
+                throw new ArgumentException("Column letter cannot be null or empty", nameof(columnLetter));
+            }
+
+            columnLetter = columnLetter.ToUpper();
+            int columnIndex = 0;
+
+            for (int i = 0; i < columnLetter.Length; i++)
+            {
+                char c = columnLetter[i];
+                if (c < 'A' || c > 'Z')
+                {
+                    throw new ArgumentException($"Invalid character '{c}' in column letter", nameof(columnLetter));
+                }
+
+                columnIndex = columnIndex * 26 + (c - 'A' + 1);
+            }
+
+            return columnIndex;
         }
 
         /// <summary>
