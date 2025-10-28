@@ -265,24 +265,6 @@
                         Logger.Warning($"Failed to adjust print area: {ex.Message}");
                     }
                 }
-
-                // Hiển thị thông báo kết quả
-                if (insertedCount > 0 || errorCount > 0)
-                {
-                    string resultMessage = $"Đã chèn thành công {insertedCount} hình ảnh";
-                    if (insertOnNewPage && insertedCount > 1)
-                    {
-                        resultMessage += " (mỗi ảnh trên một trang riêng)";
-                    }
-
-                    if (errorCount > 0)
-                    {
-                        resultMessage += $"\nCó {errorCount} lỗi khi chèn hình ảnh.";
-                    }
-
-                    Logger.Info(resultMessage);
-                    MessageBox.Show(resultMessage, "Hoàn thành", MessageBoxButton.OK, MessageBoxImage.Information);
-                }
             }
             catch (Exception ex)
             {
