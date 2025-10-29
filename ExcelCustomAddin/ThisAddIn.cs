@@ -49,9 +49,15 @@
         /// <summary>
         /// Lock object để đảm bảo thread safety
         /// </summary>
-        private static readonly object _lockObject = new object();        /// <summary>
-                                                                          /// InternalStartup
-                                                                          /// </summary>
+        private static readonly object _lockObject = new object();
+
+        // Column used as the page-break / right-most printed column for Evidence sheets
+        private const string PAGE_BREAK_COLUMN_NAME = "AR";
+        // Default font used for Evidence sheets and hyperlink cells
+        private const string EVIDENCE_FONT_NAME = "MS PGothic";
+        // Last row index for print area in Evidence sheets
+        private const int PRINT_AREA_LAST_ROW_IDX = 38;
+
         private void InternalStartup()
         {
             this.Startup += new EventHandler(ThisAddIn_Startup);
@@ -294,8 +300,8 @@
         {
             try
             {
-                // Tính toán chiều cao của trang hiện tại (36 dòng)
-                double pageHeight = activeCell.Height * 36;
+                // Tính toán chiều cao của trang hiện tại
+                double pageHeight = activeCell.Height * PRINT_AREA_LAST_ROW_IDX;
 
                 // Tính toán chiều cao đã sử dụng trên trang hiện tại
                 double usedHeightOnCurrentPage = maxBottomPosition - currentPageStartTop;
@@ -304,7 +310,7 @@
                 double nextImageHeightWithSpacing = nextImageHeight + activeCell.Height;
 
                 // Kiểm tra xem có cần tạo page break không
-                // Tạo page break nếu: chiều cao đã dùng + chiều cao hình tiếp theo > 36 dòng
+                // Tạo page break nếu: chiều cao đã dùng + chiều cao hình tiếp theo > chiều cao trang hiện tại
                 if (usedHeightOnCurrentPage + nextImageHeightWithSpacing > pageHeight)
                 {
                     // Chèn horizontal page break
@@ -827,276 +833,333 @@
                 var activeWorkbook = app.ActiveWorkbook;
                 var activeSheet = app.ActiveSheet as Worksheet;
 
-                // Kiểm tra workbook và sheet
-                if (activeWorkbook == null)
+                // Validate inputs
+                Range selectedRange;
+                if (!ValidateEvidenceCreationInputs(activeWorkbook, activeSheet, app, out selectedRange))
                 {
-                    Logger.Error("Không có workbook nào đang mở trong CreateEvidence");
-                    MessageBox.Show("Không có workbook nào đang mở. Vui lòng mở một workbook và thử lại.", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
-                    return;
-                }
-                if (activeSheet == null)
-                {
-                    Logger.Error("Không có sheet nào đang được chọn trong CreateEvidence");
-                    MessageBox.Show("Không có sheet nào đang được chọn. Vui lòng chọn một sheet và thử lại.", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
                     return;
                 }
 
-                // Kiểm tra selection (có thể là single cell hoặc multiple cells)
-                Range selectedRange = null;
-                try { selectedRange = app.Selection as Range; } catch { }
-                if (selectedRange == null)
-                {
-                    MessageBox.Show("Không có ô nào đang được chọn hoặc lựa chọn không hợp lệ. Vui lòng chọn một ô và thử lại.", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
-                    return;
-                }
-
-                // Kiểm tra sheet có bị bảo vệ không
-                if (activeSheet.ProtectContents || activeSheet.ProtectDrawingObjects || activeSheet.ProtectScenarios)
-                {
-                    MessageBox.Show("Sheet đang được bảo vệ. Vui lòng bỏ bảo vệ sheet và thử lại.", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
-                    return;
-                }
-
-                // Xử lý multiple cells hoặc single cell
+                // Get cells to process (handles both single and multiple cells, merged cells)
+                var cellsToProcess = GetCellsToProcess(selectedRange);
                 bool isMultipleCells = selectedRange.Cells.Count > 1;
-                var cellsToProcess = new List<Range>();
-                var processedMergedAreas = new HashSet<string>(); // Theo dõi các merged area đã được xử lý
 
-                if (isMultipleCells)
-                {
-                    // Lấy tất cả cells trong selection, nhưng chỉ lấy cell đầu tiên của merged cell
-                    foreach (Range cell in selectedRange.Cells)
-                    {
-                        // Kiểm tra nếu cell là merged cell
-                        if (cell.MergeCells)
-                        {
-                            // Lấy merged area
-                            Range mergedArea = cell.MergeArea;
-                            string mergedAreaAddress = mergedArea.Address[true, true]; // Absolute address
+                // Process each cell and create evidence sheets
+                var (createdSheets, existingSheets, errorMessages) = ProcessEvidenceCells(
+                    cellsToProcess, activeWorkbook, activeSheet);
 
-                            // Kiểm tra xem merged area này đã được xử lý chưa
-                            if (!processedMergedAreas.Contains(mergedAreaAddress))
-                            {
-                                // Chỉ lấy cell đầu tiên (top-left) của merged area
-                                Range firstCell = mergedArea.Cells[1, 1];
-                                cellsToProcess.Add(firstCell);
-                                processedMergedAreas.Add(mergedAreaAddress);
-
-                                Logger.Debug($"Merged cell detected at {cell.Address[false, false]}, using first cell {firstCell.Address[false, false]}");
-                            }
-                        }
-                        else
-                        {
-                            // Cell thường, thêm vào danh sách
-                            cellsToProcess.Add(cell);
-                        }
-                    }
-                }
-                else
-                {
-                    // Chỉ có 1 cell - kiểm tra xem có phải merged cell không
-                    if (selectedRange.MergeCells)
-                    {
-                        // Nếu là merged cell, lấy cell đầu tiên của merged area
-                        Range mergedArea = selectedRange.MergeArea;
-                        Range firstCell = mergedArea.Cells[1, 1];
-                        cellsToProcess.Add(firstCell);
-
-                        Logger.Debug($"Single merged cell detected at {selectedRange.Address[false, false]}, using first cell {firstCell.Address[false, false]}");
-                    }
-                    else
-                    {
-                        // Cell thường
-                        cellsToProcess.Add(selectedRange);
-                    }
-                }
-
-                var createdSheets = new List<string>();
-                var existingSheets = new List<string>();
-                var errorMessages = new List<string>();
-
-                // Xử lý từng cell
-                foreach (var cell in cellsToProcess)
-                {
-                    try
-                    {
-                        // Lấy giá trị của ô làm tên sheet mới
-                        string cellValue = cell.Value2 != null ? cell.Value2.ToString().Trim() : "";
-
-                        // Xử lý trường hợp cell rỗng - áp dụng cho cả single cell và merged cell
-                        // Chỉ thực hiện auto naming khi có ít nhất 1 cell được xử lý (tránh multiple cells thực sự)
-                        if (string.IsNullOrEmpty(cellValue) && cellsToProcess.Count <= 1)
-                        {
-                            // Kiểm tra điều kiện đặc biệt cho sheet 共通 hoặc テスト項目
-                            string currentSheetName = activeSheet.Name;
-                            if ((currentSheetName == "共通" || currentSheetName == "テスト項目"))
-                            {
-                                // Kiểm tra xem dòng thứ 2 của cột hiện tại có giá trị "参考 No." không
-                                var row2Cell = activeSheet.Cells[2, cell.Column];
-
-                                // Tạo tên sheet tự động
-                                cellValue = GenerateAutoSheetName(activeSheet, cell.Column, currentSheetName);
-
-                                // Ghi giá trị vào cell (merged cell sẽ tự động ghi vào toàn bộ merged area)
-                                if (!string.IsNullOrEmpty(cellValue))
-                                {
-                                    cell.Value2 = cellValue;
-                                    Logger.Debug($"Auto-generated sheet name '{cellValue}' for cell {cell.Address[false, false]} (Column: {cell.Column})");
-                                }
-                            }
-                        }
-
-                        if (string.IsNullOrEmpty(cellValue))
-                        {
-                            errorMessages.Add($"Ô {cell.Address[false, false]} đang để trống. Trường hợp chọn nhiều ô thì cần nhập sẵn giá trị cho các ô đã chọn");
-                            continue;
-                        }
-
-                        // Tạo tên sheet mới từ giá trị ô
-                        string newSheetName = cellValue;
-
-                        // Kiểm tra sheet đã tồn tại chưa
-                        Worksheet existingSheet = null;
-                        foreach (Worksheet ws in activeWorkbook.Worksheets)
-                        {
-                            if (ws.Name == newSheetName)
-                            {
-                                existingSheet = ws;
-                                break;
-                            }
-                        }
-
-                        if (existingSheet != null)
-                        {
-                            // Nếu sheet đã tồn tại, tạo hyperlink đến sheet đó và cập nhật nút back
-                            activeSheet.Hyperlinks.Add(cell, "", $"'{newSheetName}'!A1", Type.Missing, newSheetName);
-
-                            // Thiết lập font MS PGothic cho hyperlink cell
-                            cell.Font.Name = "MS PGothic";
-
-                            // Đặt giá trị "Back" vào ô A1 của sheet đã tồn tại
-                            int aColumnIndex = GetColumnIndex("A"); // A = 1
-                            existingSheet.Cells[1, aColumnIndex].Value2 = "<Back";
-
-                            // Xóa hyperlink cũ nếu có
-                            try
-                            {
-                                if (existingSheet.Cells[1, aColumnIndex].Hyperlinks.Count > 0)
-                                {
-                                    existingSheet.Cells[1, aColumnIndex].Hyperlinks.Delete();
-                                }
-                            }
-                            catch { }
-
-                            // Tạo hyperlink "Back" từ ô A1 của sheet đã tồn tại về ô gốc
-                            existingSheet.Hyperlinks.Add(existingSheet.Cells[1, aColumnIndex], "", $"'{activeSheet.Name}'!{cell.Address[false, false]}", Type.Missing, "<Back");
-
-                            // Thiết lập font MS PGothic cho Back hyperlink cell
-                            existingSheet.Cells[1, aColumnIndex].Font.Name = "MS PGothic";
-
-                            existingSheets.Add(newSheetName);
-                            continue;
-                        }
-
-                        // Tạo sheet mới
-                        Worksheet newWs = CreateNewEvidenceSheet(activeWorkbook, newSheetName);
-
-                        // Tạo hyperlink từ ô hiện tại đến sheet mới
-                        activeSheet.Hyperlinks.Add(cell, "", $"'{newSheetName}'!A1", Type.Missing, newSheetName);
-
-                        // Thiết lập font MS PGothic cho hyperlink cell
-                        cell.Font.Name = "MS PGothic";
-
-                        // Đặt giá trị "Back" vào ô A1 của sheet mới trước khi tạo hyperlink
-                        int aColumnIndexNew = GetColumnIndex("A"); // A = 1
-                        newWs.Cells[1, aColumnIndexNew].Value2 = "<Back";
-
-                        // Tạo hyperlink "Back" từ ô A1 của sheet mới về ô gốc
-                        newWs.Hyperlinks.Add(newWs.Cells[1, aColumnIndexNew], "", $"'{activeSheet.Name}'!{cell.Address[false, false]}", Type.Missing, "<Back");
-
-                        // Thiết lập font MS PGothic cho Back hyperlink cell
-                        newWs.Cells[1, aColumnIndexNew].Font.Name = "MS PGothic";
-
-                        createdSheets.Add(newSheetName);
-                    }
-                    catch (Exception ex)
-                    {
-                        errorMessages.Add($"Lỗi khi xử lý ô {cell.Address[false, false]}: {ex.Message}");
-                    }
-                }
-
-                // Hiển thị thông báo kết quả hoặc focus vào sheet mới
-                if (isMultipleCells)
-                {
-                    // Trường hợp nhiều cells: Hiển thị thông báo và không focus
-                    var resultMessage = new StringBuilder();
-
-                    if (existingSheets.Count > 0)
-                    {
-                        resultMessage.AppendLine($"\n⚠ {existingSheets.Count} sheet(s) đã tồn tại (chỉ tạo hyperlink):");
-                        foreach (var sheetName in existingSheets)
-                        {
-                            resultMessage.AppendLine($"  • {sheetName}");
-                        }
-                    }
-
-                    if (errorMessages.Count > 0)
-                    {
-                        resultMessage.AppendLine($"\n❌ {errorMessages.Count} lỗi:");
-                        foreach (var error in errorMessages)
-                        {
-                            resultMessage.AppendLine($"  • {error}");
-                        }
-                    }
-
-                    if (resultMessage.Length > 0)
-                    {
-                        MessageBox.Show(resultMessage.ToString(), "Kết quả tạo Evidence Sheets", MessageBoxButton.OK, MessageBoxImage.Information);
-                    }
-
-                    // Cập nhật danh sách sheet trong action panel (không focus vào sheet mới)
-                    if (_actionPanel != null)
-                    {
-                        var currentSheetName = activeSheet.Name; // Giữ nguyên sheet hiện tại
-                        _actionPanel.BindSheetList(this.GetListOfSheet(), currentSheetName);
-                    }
-                }
-                else
-                {
-                    // Trường hợp single cell: Focus vào sheet mới (nếu có) và không hiển thị thông báo
-                    if (createdSheets.Count > 0)
-                    {
-                        // Focus vào sheet mới được tạo
-                        string newSheetName = createdSheets[0];
-                        foreach (Worksheet ws in activeWorkbook.Worksheets)
-                        {
-                            if (ws.Name == newSheetName)
-                            {
-                                ws.Activate();
-                                break;
-                            }
-                        }
-
-                        // Cập nhật danh sách sheet trong action panel với sheet mới
-                        if (_actionPanel != null)
-                        {
-                            _actionPanel.BindSheetList(this.GetListOfSheet(), newSheetName);
-                        }
-                    }
-                    else
-                    {
-                        // Nếu không tạo sheet mới (sheet đã tồn tại), chỉ cập nhật action panel
-                        if (_actionPanel != null)
-                        {
-                            var currentSheetName = activeSheet.Name;
-                            _actionPanel.BindSheetList(this.GetListOfSheet(), currentSheetName);
-                        }
-                    }
-                }
+                // Show results and update UI
+                HandleEvidenceCreationResults(
+                    isMultipleCells, createdSheets, existingSheets, errorMessages,
+                    activeWorkbook, activeSheet);
             }
             catch (Exception ex)
             {
                 MessageBox.Show($"Có lỗi xảy ra khi tạo sheet bằng chứng: {ex.Message}", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        /// <summary>
+        /// Validate inputs for evidence creation
+        /// </summary>
+        private bool ValidateEvidenceCreationInputs(Workbook activeWorkbook, Worksheet activeSheet, Microsoft.Office.Interop.Excel.Application app, out Range selectedRange)
+        {
+            selectedRange = null;
+
+            if (activeWorkbook == null)
+            {
+                Logger.Error("Không có workbook nào đang mở trong CreateEvidence");
+                MessageBox.Show("Không có workbook nào đang mở. Vui lòng mở một workbook và thử lại.", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+                return false;
+            }
+
+            if (activeSheet == null)
+            {
+                Logger.Error("Không có sheet nào đang được chọn trong CreateEvidence");
+                MessageBox.Show("Không có sheet nào đang được chọn. Vui lòng chọn một sheet và thử lại.", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+                return false;
+            }
+
+            try { selectedRange = app.Selection as Range; } catch { }
+            if (selectedRange == null)
+            {
+                MessageBox.Show("Không có ô nào đang được chọn hoặc lựa chọn không hợp lệ. Vui lòng chọn một ô và thử lại.", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+                return false;
+            }
+
+            if (activeSheet.ProtectContents || activeSheet.ProtectDrawingObjects || activeSheet.ProtectScenarios)
+            {
+                MessageBox.Show("Sheet đang được bảo vệ. Vui lòng bỏ bảo vệ sheet và thử lại.", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+                return false;
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Get cells to process from selected range (handles merged cells)
+        /// </summary>
+        private List<Range> GetCellsToProcess(Range selectedRange)
+        {
+            var cellsToProcess = new List<Range>();
+            var processedMergedAreas = new HashSet<string>();
+            bool isMultipleCells = selectedRange.Cells.Count > 1;
+
+            if (isMultipleCells)
+            {
+                foreach (Range cell in selectedRange.Cells)
+                {
+                    if (cell.MergeCells)
+                    {
+                        Range mergedArea = cell.MergeArea;
+                        string mergedAreaAddress = mergedArea.Address[true, true];
+
+                        if (!processedMergedAreas.Contains(mergedAreaAddress))
+                        {
+                            Range firstCell = mergedArea.Cells[1, 1];
+                            cellsToProcess.Add(firstCell);
+                            processedMergedAreas.Add(mergedAreaAddress);
+                            Logger.Debug($"Merged cell detected at {cell.Address[false, false]}, using first cell {firstCell.Address[false, false]}");
+                        }
+                    }
+                    else
+                    {
+                        cellsToProcess.Add(cell);
+                    }
+                }
+            }
+            else
+            {
+                if (selectedRange.MergeCells)
+                {
+                    Range mergedArea = selectedRange.MergeArea;
+                    Range firstCell = mergedArea.Cells[1, 1];
+                    cellsToProcess.Add(firstCell);
+                    Logger.Debug($"Single merged cell detected at {selectedRange.Address[false, false]}, using first cell {firstCell.Address[false, false]}");
+                }
+                else
+                {
+                    cellsToProcess.Add(selectedRange);
+                }
+            }
+
+            return cellsToProcess;
+        }
+
+        /// <summary>
+        /// Process evidence cells and create/link sheets
+        /// </summary>
+        private (List<string> createdSheets, List<string> existingSheets, List<string> errorMessages)
+            ProcessEvidenceCells(List<Range> cellsToProcess, Workbook activeWorkbook, Worksheet activeSheet)
+        {
+            var createdSheets = new List<string>();
+            var existingSheets = new List<string>();
+            var errorMessages = new List<string>();
+
+            // Build worksheet dictionary for faster lookup
+            var worksheetDict = new Dictionary<string, Worksheet>(StringComparer.OrdinalIgnoreCase);
+            foreach (Worksheet ws in activeWorkbook.Worksheets)
+            {
+                worksheetDict[ws.Name] = ws;
+            }
+
+            foreach (var cell in cellsToProcess)
+            {
+                try
+                {
+                    string cellValue = GetOrGenerateCellValue(cell, activeSheet, cellsToProcess.Count);
+
+                    if (string.IsNullOrEmpty(cellValue))
+                    {
+                        errorMessages.Add($"Ô {cell.Address[false, false]} đang để trống. Trường hợp chọn nhiều ô thì cần nhập sẵn giá trị cho các ô đã chọn");
+                        continue;
+                    }
+
+                    if (worksheetDict.TryGetValue(cellValue, out Worksheet existingSheet))
+                    {
+                        CreateHyperlinkToExistingSheet(cell, activeSheet, existingSheet, cellValue);
+                        existingSheets.Add(cellValue);
+                    }
+                    else
+                    {
+                        Worksheet newWs = CreateNewEvidenceSheet(activeWorkbook, cellValue);
+                        CreateHyperlinkToNewSheet(cell, activeSheet, newWs, cellValue);
+                        createdSheets.Add(cellValue);
+                        worksheetDict[cellValue] = newWs; // Add to cache
+                    }
+                }
+                catch (Exception ex)
+                {
+                    errorMessages.Add($"Lỗi khi xử lý ô {cell.Address[false, false]}: {ex.Message}");
+                }
+            }
+
+            return (createdSheets, existingSheets, errorMessages);
+        }
+
+        /// <summary>
+        /// Get cell value or generate auto sheet name if empty
+        /// </summary>
+        private string GetOrGenerateCellValue(Range cell, Worksheet activeSheet, int cellsToProcessCount)
+        {
+            string cellValue = cell.Value2 != null ? cell.Value2.ToString().Trim() : "";
+
+            if (string.IsNullOrEmpty(cellValue) && cellsToProcessCount <= 1)
+            {
+                string currentSheetName = activeSheet.Name;
+                if (currentSheetName == "共通" || currentSheetName == "テスト項目")
+                {
+                    cellValue = GenerateAutoSheetName(activeSheet, cell.Column, currentSheetName);
+                    if (!string.IsNullOrEmpty(cellValue))
+                    {
+                        cell.Value2 = cellValue;
+                        Logger.Debug($"Auto-generated sheet name '{cellValue}' for cell {cell.Address[false, false]} (Column: {cell.Column})");
+                    }
+                }
+            }
+
+            return cellValue;
+        }
+
+        /// <summary>
+        /// Create hyperlink to existing sheet and setup back button
+        /// </summary>
+        private void CreateHyperlinkToExistingSheet(Range cell, Worksheet sourceSheet, Worksheet existingSheet, string sheetName)
+        {
+            // Tạo hyperlink đến sheet đã tồn tại
+            sourceSheet.Hyperlinks.Add(cell, "", $"'{sheetName}'!A1", Type.Missing, sheetName);
+            cell.Font.Name = EVIDENCE_FONT_NAME;
+
+            // Setup back button
+            int aColumnIndex = GetColumnIndex("A");
+            Range backCell = existingSheet.Cells[1, aColumnIndex];
+            backCell.Value2 = "<Back";
+
+            try
+            {
+                if (backCell.Hyperlinks.Count > 0)
+                {
+                    backCell.Hyperlinks.Delete();
+                }
+            }
+            catch { }
+
+            // Tạo hyperlink back về cell gốc với địa chỉ đầy đủ
+            string backAddress = $"'{sourceSheet.Name}'!{cell.Address[false, false]}";
+            existingSheet.Hyperlinks.Add(backCell, "", backAddress, Type.Missing, "<Back");
+            backCell.Font.Name = EVIDENCE_FONT_NAME;
+        }
+
+        /// <summary>
+        /// Create hyperlink to new sheet and setup back button
+        /// </summary>
+        private void CreateHyperlinkToNewSheet(Range cell, Worksheet sourceSheet, Worksheet newSheet, string sheetName)
+        {
+            // Tạo hyperlink đến sheet mới
+            sourceSheet.Hyperlinks.Add(cell, "", $"'{sheetName}'!A1", Type.Missing, sheetName);
+            cell.Font.Name = EVIDENCE_FONT_NAME;
+
+            // Setup back button
+            int aColumnIndex = GetColumnIndex("A");
+            Range backCell = newSheet.Cells[1, aColumnIndex];
+            backCell.Value2 = "<Back";
+
+            // Tạo hyperlink back về cell gốc với địa chỉ đầy đủ
+            string backAddress = $"'{sourceSheet.Name}'!{cell.Address[false, false]}";
+            newSheet.Hyperlinks.Add(backCell, "", backAddress, Type.Missing, "<Back");
+            backCell.Font.Name = EVIDENCE_FONT_NAME;
+        }
+
+        /// <summary>
+        /// Handle evidence creation results (show messages and update UI)
+        /// </summary>
+        private void HandleEvidenceCreationResults(
+            bool isMultipleCells,
+            List<string> createdSheets,
+            List<string> existingSheets,
+            List<string> errorMessages,
+            Workbook activeWorkbook,
+            Worksheet activeSheet)
+        {
+            if (isMultipleCells)
+            {
+                ShowMultipleCellsResults(existingSheets, errorMessages);
+                UpdateActionPanel(activeSheet.Name);
+            }
+            else
+            {
+                HandleSingleCellResult(createdSheets, activeWorkbook, activeSheet);
+            }
+        }
+
+        /// <summary>
+        /// Show results for multiple cells processing
+        /// </summary>
+        private void ShowMultipleCellsResults(List<string> existingSheets, List<string> errorMessages)
+        {
+            if (existingSheets.Count == 0 && errorMessages.Count == 0)
+            {
+                return;
+            }
+
+            var resultMessage = new StringBuilder();
+
+            if (existingSheets.Count > 0)
+            {
+                resultMessage.AppendLine($"\n⚠ {existingSheets.Count} sheet(s) đã tồn tại (chỉ tạo hyperlink):");
+                foreach (var sheetName in existingSheets)
+                {
+                    resultMessage.AppendLine($"  • {sheetName}");
+                }
+            }
+
+            if (errorMessages.Count > 0)
+            {
+                resultMessage.AppendLine($"\n❌ {errorMessages.Count} lỗi:");
+                foreach (var error in errorMessages)
+                {
+                    resultMessage.AppendLine($"  • {error}");
+                }
+            }
+
+            if (resultMessage.Length > 0)
+            {
+                MessageBox.Show(resultMessage.ToString(), "Kết quả tạo Evidence Sheets", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+        }
+
+        /// <summary>
+        /// Handle result for single cell processing (focus on new sheet if created)
+        /// </summary>
+        private void HandleSingleCellResult(List<string> createdSheets, Workbook activeWorkbook, Worksheet activeSheet)
+        {
+            if (createdSheets.Count > 0)
+            {
+                string newSheetName = createdSheets[0];
+                foreach (Worksheet ws in activeWorkbook.Worksheets)
+                {
+                    if (ws.Name == newSheetName)
+                    {
+                        ws.Activate();
+                        break;
+                    }
+                }
+                UpdateActionPanel(newSheetName);
+            }
+            else
+            {
+                UpdateActionPanel(activeSheet.Name);
+            }
+        }
+
+        /// <summary>
+        /// Update action panel with current sheet
+        /// </summary>
+        private void UpdateActionPanel(string currentSheetName)
+        {
+            if (_actionPanel != null)
+            {
+                _actionPanel.BindSheetList(this.GetListOfSheet(), currentSheetName);
             }
         }
 
@@ -1116,15 +1179,15 @@
             newWs.Rows.RowHeight = 12.6;
 
             // Thiết lập font chữ cho toàn bộ sheet
-            newWs.Cells.Font.Name = "MS PGothic";
+            newWs.Cells.Font.Name = EVIDENCE_FONT_NAME;
             newWs.Cells.Font.Size = 11;
 
             // Đặt giá trị vào ô AR1 để mở rộng used range
-            int azColumnIndex = GetColumnIndex("AR");
+            int azColumnIndex = GetColumnIndex(PAGE_BREAK_COLUMN_NAME);
             newWs.Cells[1, azColumnIndex].Value2 = " ";
             newWs.PageSetup.Orientation = XlPageOrientation.xlLandscape;
             newWs.PageSetup.PaperSize = XlPaperSize.xlPaperA4;
-            newWs.PageSetup.PrintArea = "$A$1:$AR$36";
+            newWs.PageSetup.PrintArea = "$A$1:$" + PAGE_BREAK_COLUMN_NAME + "$" + PRINT_AREA_LAST_ROW_IDX.ToString();
             newWs.PageSetup.Zoom = 100;
             newWs.PageSetup.FitToPagesWide = false;
             newWs.PageSetup.FitToPagesTall = false;
@@ -1191,7 +1254,7 @@
                 backCell.Value2 = "<Back";
 
                 // Định dạng cell chứa nút Back
-                backCell.Font.Name = "MS PGothic";
+                backCell.Font.Name = EVIDENCE_FONT_NAME;
                 backCell.Font.Size = 12;
                 backCell.Font.Bold = true;
                 backCell.Font.Color = System.Drawing.ColorTranslator.ToOle(System.Drawing.Color.Blue);
@@ -1210,8 +1273,8 @@
                 string sourceAddress = $"'{sourceSheet.Name}'!{sourceCell.Address[false, false]}";
                 targetSheet.Hyperlinks.Add(backCell, "", sourceAddress, Type.Missing, "<Back");
 
-                // Đảm bảo font MS PGothic cho Back hyperlink cell (đã set ở trên nhưng đảm bảo)
-                backCell.Font.Name = "MS PGothic";
+                // Đảm bảo font cho Back hyperlink cell (đã set ở trên nhưng đảm bảo)
+                backCell.Font.Name = EVIDENCE_FONT_NAME;
 
                 // Cập nhật hoặc thêm comment/note cho cell Back
                 try
@@ -1238,7 +1301,7 @@
                     !titleCell.Value2.ToString().StartsWith("Evidence:"))
                 {
                     titleCell.Value2 = $"Evidence: {targetSheet.Name}";
-                    titleCell.Font.Name = "MS PGothic";
+                    titleCell.Font.Name = EVIDENCE_FONT_NAME;
                     titleCell.Font.Size = 14;
                     titleCell.Font.Bold = true;
                     titleCell.HorizontalAlignment = XlHAlign.xlHAlignLeft;
@@ -1265,8 +1328,8 @@
                     string sourceAddress = $"'{sourceSheet.Name}'!{sourceCell.Address[false, false]}";
                     targetSheet.Hyperlinks.Add(fallbackCell, "", sourceAddress, Type.Missing, "<Back");
 
-                    // Thiết lập font MS PGothic cho fallback Back hyperlink cell
-                    fallbackCell.Font.Name = "MS PGothic";
+                    // Thiết lập font cho fallback Back hyperlink cell
+                    fallbackCell.Font.Name = EVIDENCE_FONT_NAME;
 
                     Logger.Info("Fallback back button created successfully");
                 }
@@ -1403,8 +1466,8 @@
                     }
                 }
 
-                // Cố định vùng in từ A1 đến AZ theo chiều cao của hình ảnh
-                int azColumnIndex = GetColumnIndex("AR");
+                // Cố định vùng in từ A1 đến AR theo chiều cao của hình ảnh
+                int azColumnIndex = GetColumnIndex(PAGE_BREAK_COLUMN_NAME);
 
                 startColumn = aColumnIndex;
                 startRow = 1;
@@ -1415,12 +1478,12 @@
                 {
                     // Lấy kích thước cell thực tế để tính toán dòng cuối
                     double actualCellHeight = (double)worksheet.Cells[1, aColumnIndex].Height;
-                    endRow = Math.Max(36, (int)(maxBottom / actualCellHeight) + 1); // Tối thiểu 36 dòng, chỉ thêm 1 dòng buffer
+                    endRow = Math.Max(PRINT_AREA_LAST_ROW_IDX, (int)(maxBottom / actualCellHeight) + 1); // Tối thiểu PRINT_AREA_LAST_ROW_IDX dòng, chỉ thêm 1 dòng buffer
                     Logger.Debug($"Calculated endRow based on image bottom: {endRow} (maxBottom={maxBottom:F1}, cellHeight={actualCellHeight:F1})");
                 }
                 else
                 {
-                    endRow = 36; // Mặc định 36 dòng như evidence sheet
+                    endRow = PRINT_AREA_LAST_ROW_IDX;
                 }
 
                 // Đảm bảo không vượt quá giới hạn worksheet
@@ -1428,8 +1491,8 @@
 
                 Logger.Debug($"Fixed print area bounds: A1:AZ{endRow} (Column {startColumn}-{endColumn}, Row 1-{endRow})");
 
-                // Tạo print area mới với định dạng cố định A1:AZ{endRow}
-                string newPrintArea = $"$A$1:$AZ${endRow}";
+                // Tạo print area mới với định dạng cố định A1:AR{endRow}
+                string newPrintArea = "$A$1:$" + PAGE_BREAK_COLUMN_NAME + "$" + endRow;
                 worksheet.PageSetup.PrintArea = newPrintArea;
 
                 Logger.Info($"Print area updated to: {newPrintArea} (covers {imageCount} images, fixed width A-AZ)");
