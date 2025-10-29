@@ -1115,13 +1115,16 @@
         }
 
         /// <summary>
-        /// Create hyperlink to existing sheet and setup back button
+        /// Create hyperlink to existing sheet and setup back button with named range reference
         /// </summary>
         private void CreateHyperlinkToExistingSheet(Range cell, Worksheet sourceSheet, Worksheet existingSheet, string sheetName)
         {
             // Tạo hyperlink đến sheet đã tồn tại
             sourceSheet.Hyperlinks.Add(cell, "", $"'{sheetName}'!A1", Type.Missing, sheetName);
             cell.Font.Name = EVIDENCE_FONT_NAME;
+
+            // Tạo hoặc lấy named range cho cell gốc
+            string namedRangeName = GetOrCreateNamedRangeForCell(cell, sourceSheet);
 
             // Setup back button
             int aColumnIndex = GetColumnIndex("A");
@@ -1137,14 +1140,25 @@
             }
             catch { }
 
-            // Tạo hyperlink back về cell gốc với địa chỉ đầy đủ
-            string backAddress = $"'{sourceSheet.Name}'!{cell.Address[false, false]}";
+            // Tạo hyperlink back về cell gốc - sử dụng named range nếu có, ngược lại dùng địa chỉ trực tiếp
+            string backAddress;
+            if (!string.IsNullOrEmpty(namedRangeName))
+            {
+                backAddress = namedRangeName; // Sử dụng named range
+                Logger.Debug($"Back button (existing sheet) sẽ reference đến named range: {namedRangeName}");
+            }
+            else
+            {
+                backAddress = $"'{sourceSheet.Name}'!{cell.Address[false, false]}"; // Fallback về địa chỉ trực tiếp
+                Logger.Debug($"Back button (existing sheet) sẽ reference đến địa chỉ trực tiếp: {backAddress}");
+            }
+
             existingSheet.Hyperlinks.Add(backCell, "", backAddress, Type.Missing, "<Back");
             backCell.Font.Name = EVIDENCE_FONT_NAME;
         }
 
         /// <summary>
-        /// Create hyperlink to new sheet and setup back button
+        /// Create hyperlink to new sheet and setup back button with named range reference
         /// </summary>
         private void CreateHyperlinkToNewSheet(Range cell, Worksheet sourceSheet, Worksheet newSheet, string sheetName)
         {
@@ -1152,13 +1166,54 @@
             sourceSheet.Hyperlinks.Add(cell, "", $"'{sheetName}'!A1", Type.Missing, sheetName);
             cell.Font.Name = EVIDENCE_FONT_NAME;
 
+            // Tạo named range cho cell gốc trước khi setup back button
+            string namedRangeName = null;
+            try
+            {
+                // Lưu trữ active cell hiện tại
+                var originalActiveCell = Globals.ThisAddIn.Application.ActiveCell as Range;
+
+                // Activate source sheet và cell để tạo named range
+                sourceSheet.Activate();
+                cell.Select();
+
+                // Tạo named range cho cell gốc và lấy tên
+                namedRangeName = CreateNamedRange();
+
+                // Khôi phục active cell gốc nếu có
+                if (originalActiveCell != null)
+                {
+                    try
+                    {
+                        originalActiveCell.Worksheet.Activate();
+                        originalActiveCell.Select();
+                    }
+                    catch { /* Ignore errors when restoring */ }
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Warning($"Không thể tạo named range cho back button: {ex.Message}");
+            }
+
             // Setup back button
             int aColumnIndex = GetColumnIndex("A");
             Range backCell = newSheet.Cells[1, aColumnIndex];
             backCell.Value2 = "<Back";
 
-            // Tạo hyperlink back về cell gốc với địa chỉ đầy đủ
-            string backAddress = $"'{sourceSheet.Name}'!{cell.Address[false, false]}";
+            // Tạo hyperlink back về cell gốc - sử dụng named range nếu có, ngược lại dùng địa chỉ trực tiếp
+            string backAddress;
+            if (!string.IsNullOrEmpty(namedRangeName))
+            {
+                backAddress = namedRangeName; // Sử dụng named range
+                Logger.Debug($"Back button sẽ reference đến named range: {namedRangeName}");
+            }
+            else
+            {
+                backAddress = $"'{sourceSheet.Name}'!{cell.Address[false, false]}"; // Fallback về địa chỉ trực tiếp
+                Logger.Debug($"Back button sẽ reference đến địa chỉ trực tiếp: {backAddress}");
+            }
+
             newSheet.Hyperlinks.Add(backCell, "", backAddress, Type.Missing, "<Back");
             backCell.Font.Name = EVIDENCE_FONT_NAME;
         }
@@ -2104,6 +2159,395 @@
             catch (Exception ex)
             {
                 Logger.Error($"Có lỗi xảy ra khi áp dụng template: {ex.Message}", ex);
+            }
+        }
+
+        /// <summary>
+        /// Các ký tự đặc biệt cần thay thế trong tên named range
+        /// </summary>
+        private static readonly char[] INVALID_NAME_CHARACTERS = { '', '.', '~', ' ', '-', '+', '=', '*', '/', '\\', '[', ']', '(', ')', '{', '}', '<', '>', '!', '@', '#', '$', '%', '^', '&', '|', ':', ';', '"', '\'', ',', '?' };
+
+        /// <summary>
+        /// Tạo named range cho ô hiện tại với tên dựa trên giá trị của ô
+        /// </summary>
+        /// <returns>Tên named range đã tạo nếu thành công, null nếu thất bại</returns>
+        private string CreateNamedRange()
+        {
+            try
+            {
+                // Validate và lấy các object cần thiết
+                if (!TryGetActiveObjects(out var activeWorkbook, out var activeSheet, out var activeCell))
+                {
+                    return null;
+                }
+
+                // Tạo tên cho named range
+                string rangeName = GenerateValidRangeName(activeCell);
+                if (string.IsNullOrEmpty(rangeName))
+                {
+                    Logger.Warning("Không thể tạo tên named range hợp lệ từ giá trị ô");
+                    return null;
+                }
+
+                // Đảm bảo tên unique
+                rangeName = EnsureUniqueRangeName(activeWorkbook, rangeName);
+                if (string.IsNullOrEmpty(rangeName))
+                {
+                    Logger.Warning("Không thể tạo tên named range unique");
+                    return null;
+                }
+
+                // Tạo named range
+                if (CreateNamedRangeInternal(activeWorkbook, activeSheet, activeCell, rangeName))
+                {
+                    return rangeName; // Trả về tên named range đã tạo
+                }
+                else
+                {
+                    return null;
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Có lỗi xảy ra khi tạo named range: {ex.Message}", ex);
+                MessageBox.Show($"Có lỗi xảy ra khi tạo named range: {ex.Message}", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Lấy và validate các object Excel hiện tại
+        /// </summary>
+        private bool TryGetActiveObjects(out Workbook workbook, out Worksheet worksheet, out Range cell)
+        {
+            workbook = null;
+            worksheet = null;
+            cell = null;
+
+            try
+            {
+                workbook = Globals.ThisAddIn.Application.ActiveWorkbook;
+                worksheet = Globals.ThisAddIn.Application.ActiveSheet as Worksheet;
+                cell = Globals.ThisAddIn.Application.ActiveCell as Range;
+
+                if (workbook == null)
+                {
+                    Logger.Warning("Không có workbook nào đang mở");
+                    return false;
+                }
+
+                if (worksheet == null)
+                {
+                    Logger.Warning("Không có worksheet nào đang active");
+                    return false;
+                }
+
+                if (cell == null)
+                {
+                    Logger.Warning("Không có cell nào đang được chọn");
+                    return false;
+                }
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Lỗi khi lấy active objects: {ex.Message}", ex);
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Tạo tên hợp lệ cho named range từ giá trị của cell
+        /// </summary>
+        private string GenerateValidRangeName(Range cell)
+        {
+            try
+            {
+                string cellValue = cell.Value2?.ToString()?.Trim() ?? "";
+
+                if (string.IsNullOrEmpty(cellValue))
+                {
+                    Logger.Debug("Giá trị ô trống, không thể tạo tên named range");
+                    return null;
+                }
+
+                // Thay thế các ký tự không hợp lệ
+                string validName = cellValue;
+                foreach (char invalidChar in INVALID_NAME_CHARACTERS)
+                {
+                    validName = validName.Replace(invalidChar.ToString(), "_");
+                }
+
+                // Đảm bảo tên bắt đầu bằng chữ cái hoặc underscore
+                if (!char.IsLetter(validName[0]) && validName[0] != '_')
+                {
+                    validName = "_" + validName;
+                }
+
+                // Giới hạn độ dài tên (Excel cho phép tối đa 255 ký tự)
+                if (validName.Length > 255)
+                {
+                    validName = validName.Substring(0, 255);
+                }
+
+                // Loại bỏ các underscore liên tiếp
+                while (validName.Contains("__"))
+                {
+                    validName = validName.Replace("__", "_");
+                }
+
+                // Loại bỏ underscore ở cuối
+                validName = validName.TrimEnd('_');
+
+                // Đảm bảo tên không rỗng sau khi clean up
+                if (string.IsNullOrEmpty(validName) || validName == "_")
+                {
+                    Logger.Debug("Tên named range rỗng sau khi clean up, sử dụng tên mặc định");
+                    validName = $"Cell_{cell.Row}_{cell.Column}";
+                }
+
+                // Validate final name
+                if (!IsValidNamedRangeName(validName))
+                {
+                    Logger.Warning($"Tên generated '{validName}' không hợp lệ, sử dụng fallback");
+                    validName = $"Cell_{cell.Row}_{cell.Column}";
+                }
+
+                return validName;
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Lỗi khi tạo tên named range: {ex.Message}", ex);
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Đảm bảo tên named range là duy nhất trong workbook
+        /// </summary>
+        private string EnsureUniqueRangeName(Workbook workbook, string baseName)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(baseName))
+                {
+                    Logger.Error("Base name is null or empty");
+                    return null;
+                }
+
+                string uniqueName = baseName;
+                int counter = 1;
+
+                // Kiểm tra xem tên đã tồn tại chưa
+                while (NameExistsInWorkbook(workbook, uniqueName))
+                {
+                    uniqueName = $"{baseName}_{counter}";
+                    counter++;
+
+                    // Validate tên mới
+                    if (!IsValidNamedRangeName(uniqueName))
+                    {
+                        Logger.Warning($"Generated unique name '{uniqueName}' không hợp lệ, thử lại");
+                        continue;
+                    }
+
+                    // Tránh vòng lặp vô hạn
+                    if (counter > 1000)
+                    {
+                        Logger.Warning($"Không thể tạo tên unique sau 1000 lần thử cho base name: {baseName}");
+                        return null;
+                    }
+                }
+
+                // Final validation
+                if (!IsValidNamedRangeName(uniqueName))
+                {
+                    Logger.Error($"Final unique name '{uniqueName}' không hợp lệ");
+                    return null;
+                }
+
+                return uniqueName;
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Lỗi khi kiểm tra tên unique: {ex.Message}", ex);
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Kiểm tra xem tên đã tồn tại trong workbook chưa
+        /// </summary>
+        private bool NameExistsInWorkbook(Workbook workbook, string name)
+        {
+            try
+            {
+                foreach (Name existingName in workbook.Names)
+                {
+                    if (string.Equals(existingName.Name, name, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return true;
+                    }
+                }
+                return false;
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Lỗi khi kiểm tra tên tồn tại: {ex.Message}", ex);
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Tạo named range với xử lý lỗi chi tiết
+        /// </summary>
+        private bool CreateNamedRangeInternal(Workbook workbook, Worksheet worksheet, Range cell, string rangeName)
+        {
+            try
+            {
+                // Validate inputs
+                if (workbook == null || worksheet == null || cell == null || string.IsNullOrEmpty(rangeName))
+                {
+                    Logger.Error("Invalid parameters for CreateNamedRangeInternal");
+                    return false;
+                }
+
+                // Validate tên named range theo quy tắc Excel
+                if (!IsValidNamedRangeName(rangeName))
+                {
+                    Logger.Error($"Tên named range không hợp lệ: {rangeName}");
+                    return false;
+                }
+
+                // Kiểm tra lại xem tên đã tồn tại chưa (double check)
+                if (NameExistsInWorkbook(workbook, rangeName))
+                {
+                    Logger.Warning($"Named range '{rangeName}' đã tồn tại, không thể tạo lại");
+                    return false;
+                }
+
+                // Tạo named range reference
+                string cellAddress = $"'{worksheet.Name}'!{cell.Address[false, false, XlReferenceStyle.xlA1]}";
+                Logger.Debug($"Creating named range '{rangeName}' with address: {cellAddress}");
+
+                // Tạo named range với workbook scope
+                workbook.Names.Add(rangeName, $"={cellAddress}");
+
+                Logger.Info($"Đã tạo named range '{rangeName}' cho ô {cell.Address[false, false]} trong sheet '{worksheet.Name}'");
+                return true;
+            }
+            catch (System.Runtime.InteropServices.COMException comEx)
+            {
+                Logger.Error($"Lỗi COM khi tạo named range '{rangeName}': 0x{comEx.ErrorCode:X8} - {comEx.Message}", comEx);
+
+                // Xử lý các lỗi cụ thể
+                switch (comEx.ErrorCode)
+                {
+                    case -2146827284: // 0x800A03EC - General Excel error
+                        Logger.Error("Lỗi Excel chung - có thể do tên không hợp lệ hoặc workbook corrupted");
+                        break;
+                    case -2147352567: // 0x80020009 - Invalid name
+                        Logger.Error("Tên named range không hợp lệ theo quy tắc Excel");
+                        break;
+                    case -2146827864: // 0x800A01A8 - Name already exists
+                        Logger.Error("Named range đã tồn tại");
+                        break;
+                    default:
+                        Logger.Error($"Lỗi COM không xác định: 0x{comEx.ErrorCode:X8}");
+                        break;
+                }
+
+                return false;
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Lỗi không xác định khi tạo named range '{rangeName}': {ex.Message}", ex);
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Kiểm tra xem tên named range có hợp lệ theo quy tắc Excel không
+        /// </summary>
+        private bool IsValidNamedRangeName(string name)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(name))
+                    return false;
+
+                // Tên không được bắt đầu bằng số
+                if (char.IsDigit(name[0]))
+                    return false;
+
+                // Tên không được chứa khoảng trắng ở đầu hoặc cuối
+                if (name != name.Trim())
+                    return false;
+
+                // Tên không được chứa các ký tự đặc biệt (ngoài underscore)
+                foreach (char c in name)
+                {
+                    if (!char.IsLetterOrDigit(c) && c != '_')
+                        return false;
+                }
+
+                // Tên không được là địa chỉ cell (như A1, B2, etc.)
+                if (System.Text.RegularExpressions.Regex.IsMatch(name, @"^[A-Z]+\d+$", System.Text.RegularExpressions.RegexOptions.IgnoreCase))
+                    return false;
+
+                // Tên không được vượt quá 255 ký tự
+                if (name.Length > 255)
+                    return false;
+
+                // Tên không được là các từ khóa Excel reserved
+                string[] reservedWords = { "PRINT_AREA", "PRINT_TITLES", "FILTER_DATABASE", "EXTRACT", "CONSOLIDATE_AREA", "DATABASE", "CRITERIA" };
+                if (Array.Exists(reservedWords, word => string.Equals(word, name, StringComparison.OrdinalIgnoreCase)))
+                    return false;
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Lỗi khi validate tên named range: {ex.Message}", ex);
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Tạo hoặc lấy named range cho cell (tái sử dụng nếu đã tồn tại)
+        /// </summary>
+        private string GetOrCreateNamedRangeForCell(Range cell, Worksheet sourceSheet)
+        {
+            try
+            {
+                // Lưu trữ active cell hiện tại
+                var originalActiveCell = Globals.ThisAddIn.Application.ActiveCell as Range;
+
+                // Activate source sheet và cell
+                sourceSheet.Activate();
+                cell.Select();
+
+                // Tạo named range và lấy tên
+                string namedRangeName = CreateNamedRange();
+
+                // Khôi phục active cell gốc nếu có
+                if (originalActiveCell != null)
+                {
+                    try
+                    {
+                        originalActiveCell.Worksheet.Activate();
+                        originalActiveCell.Select();
+                    }
+                    catch { /* Ignore errors when restoring */ }
+                }
+
+                return namedRangeName;
+            }
+            catch (Exception ex)
+            {
+                Logger.Warning($"Không thể tạo/lấy named range cho cell: {ex.Message}");
+                return null;
             }
         }
     }
