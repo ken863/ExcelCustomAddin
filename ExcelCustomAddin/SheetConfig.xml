@@ -34,6 +34,56 @@
     
     <!-- Số bắt đầu nếu không tìm thấy pattern nào (mặc định là 1, sẽ tạo ra 01) -->
     <StartingNumber>1</StartingNumber>
+    
+    <!-- Cột page break cho evidence sheets -->
+    <PageBreakColumnName>AR</PageBreakColumnName>
+    
+    <!-- Font name cho evidence sheets -->
+    <EvidenceFontName>MS PGothic</EvidenceFontName>
+    
+    <!-- Last row index cho print area -->
+    <PrintAreaLastRowIdx>38</PrintAreaLastRowIdx>
+    
+    <!-- Column width cho evidence sheets -->
+    <ColumnWidth>2.38</ColumnWidth>
+    
+    <!-- Row height cho evidence sheets -->
+    <RowHeight>12.6</RowHeight>
+    
+    <!-- Font size cho evidence sheets -->
+    <FontSize>11</FontSize>
+    
+    <!-- Page orientation: Landscape hoặc Portrait -->
+    <PageOrientation>Landscape</PageOrientation>
+    
+    <!-- Paper size: A4, A3, Letter, etc. -->
+    <PaperSize>A4</PaperSize>
+    
+    <!-- Zoom level -->
+    <Zoom>100</Zoom>
+    
+    <!-- Fit to pages wide -->
+    <FitToPagesWide>false</FitToPagesWide>
+    
+    <!-- Fit to pages tall -->
+    <FitToPagesTall>false</FitToPagesTall>
+    
+    <!-- Margins (inches) -->
+    <LeftMargin>0.75</LeftMargin>
+    <RightMargin>0.75</RightMargin>
+    <TopMargin>1.0</TopMargin>
+    <BottomMargin>0.75</BottomMargin>
+    <HeaderMargin>0.5</HeaderMargin>
+    <FooterMargin>0.5</FooterMargin>
+    
+    <!-- Center horizontally -->
+    <CenterHorizontally>true</CenterHorizontally>
+    
+    <!-- Window zoom level -->
+    <WindowZoom>100</WindowZoom>
+    
+    <!-- View mode: Normal, PageBreakPreview, PageLayout -->
+    <ViewMode>PageBreakPreview</ViewMode>
   </GeneralSettings>
   
   <!-- Cấu hình logging -->

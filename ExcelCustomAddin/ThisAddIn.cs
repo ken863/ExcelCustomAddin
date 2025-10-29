@@ -52,11 +52,11 @@
         private static readonly object _lockObject = new object();
 
         // Column used as the page-break / right-most printed column for Evidence sheets
-        private const string PAGE_BREAK_COLUMN_NAME = "AR";
+        private static string PAGE_BREAK_COLUMN_NAME => SheetConfigManager.GetGeneralConfig().PageBreakColumnName;
         // Default font used for Evidence sheets and hyperlink cells
-        private const string EVIDENCE_FONT_NAME = "MS PGothic";
+        private static string EVIDENCE_FONT_NAME => SheetConfigManager.GetGeneralConfig().EvidenceFontName;
         // Last row index for print area in Evidence sheets
-        private const int PRINT_AREA_LAST_ROW_IDX = 38;
+        private static int PRINT_AREA_LAST_ROW_IDX => SheetConfigManager.GetGeneralConfig().PrintAreaLastRowIdx;
 
         private void InternalStartup()
         {
@@ -88,6 +88,7 @@
                 if (_actionPanel != null)
                 {
                     _actionPanel.CreateEvidenceEvent -= this.CreateEvidence;
+                    _actionPanel.FormatImagesEvent -= this.FormatImages;
                     _actionPanel.FormatDocumentEvent -= this.FormatDocument;
                     _actionPanel.ChangeSheetNameEvent -= this.ChangeSheetName;
                     _actionPanel.PinSheetEvent -= this.PinSheet;
@@ -99,6 +100,90 @@
             {
                 // Log error if needed, but don't show MessageBox during shutdown
                 Logger.Error($"Error during shutdown: {ex.Message}", ex);
+            }
+        }
+
+        /// <summary>
+        /// Apply picture style to shape: no fill, no line, shadow, no reflection, no glow
+        /// </summary>
+        /// <param name="shape">The shape to apply style to</param>
+        private void ApplyPictureStyleToShape(Microsoft.Office.Interop.Excel.Shape shape)
+        {
+            shape.Fill.Visible = Microsoft.Office.Core.MsoTriState.msoFalse;
+            shape.Line.Visible = Microsoft.Office.Core.MsoTriState.msoFalse;
+            shape.Shadow.Style = Microsoft.Office.Core.MsoShadowStyle.msoShadowStyleOuterShadow;
+            shape.Shadow.Type = Microsoft.Office.Core.MsoShadowType.msoShadow21;
+            shape.Shadow.ForeColor.RGB = 0; // Black
+            shape.Shadow.Transparency = 0.3f;
+            shape.Shadow.Size = 100;
+            shape.Shadow.Blur = 15;
+            shape.Shadow.OffsetX = 0;
+            shape.Shadow.OffsetY = 0;
+            shape.Reflection.Type = Microsoft.Office.Core.MsoReflectionType.msoReflectionTypeNone;
+            shape.Glow.Radius = 0;
+            shape.SoftEdge.Radius = 0;
+        }
+
+        /// <summary>
+        /// FormatImages
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void FormatImages(object sender, EventArgs e)
+        {
+            try
+            {
+                var app = Globals.ThisAddIn.Application;
+
+                // Lấy các shape đã chọn
+                ShapeRange selectedShapes = null;
+                try
+                {
+                    selectedShapes = app.Selection.ShapeRange;
+                }
+                catch
+                {
+                    Logger.Error("Không có hình ảnh nào được chọn. Vui lòng chọn các hình ảnh và thử lại.");
+                    MessageBox.Show("Không có hình ảnh nào được chọn. Vui lòng chọn các hình ảnh và thử lại.", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+                    return;
+                }
+
+                if (selectedShapes == null || selectedShapes.Count == 0)
+                {
+                    Logger.Error("Không có hình ảnh nào được chọn.");
+                    MessageBox.Show("Không có hình ảnh nào được chọn.", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+                    return;
+                }
+
+                // Lấy tỷ lệ scale từ action panel
+                double scalePercent = (double)_actionPanel.numScalePercent.Value / 100.0;
+
+                int formattedCount = 0;
+                foreach (Microsoft.Office.Interop.Excel.Shape shape in selectedShapes)
+                {
+                    try
+                    {
+                        // 1. Scale theo numScalePercent
+                        shape.LockAspectRatio = Microsoft.Office.Core.MsoTriState.msoTrue;
+                        shape.Height = (float)(shape.Height * scalePercent);
+
+                        // 2. Apply picture style
+                        ApplyPictureStyleToShape(shape);
+
+                        formattedCount++;
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Warning($"Lỗi khi format hình ảnh '{shape.Name}': {ex.Message}");
+                    }
+                }
+
+                Logger.Info($"Đã format {formattedCount} hình ảnh thành công.");
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Có lỗi xảy ra khi format hình ảnh: {ex.Message}", ex);
+                MessageBox.Show($"Có lỗi xảy ra khi format hình ảnh: {ex.Message}", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -231,6 +316,9 @@
                         shape.LockAspectRatio = Microsoft.Office.Core.MsoTriState.msoTrue;
                         shape.Height = (float)(shape.Height * resizeRate);
 
+                        // Áp dụng picture style
+                        ApplyPictureStyleToShape(shape);
+
                         // Cập nhật vị trí cho hình ảnh tiếp theo
                         UpdatePositionForNextImage(activeSheet, activeCell, ref position, shape, insertOnNewPage);
 
@@ -361,6 +449,7 @@
         {
             Logger.Info("Excel Custom Add-in starting up...");
 
+            // 4939, 5073, 5175
             try
             {
                 // Khởi tạo cấu hình từ XML
@@ -536,6 +625,7 @@
                     {
                         // Hủy đăng ký các event cũ trước khi đăng ký mới để tránh đăng ký trùng lặp
                         _actionPanel.CreateEvidenceEvent -= this.CreateEvidence;
+                        _actionPanel.FormatImagesEvent -= this.FormatImages;
                         _actionPanel.FormatDocumentEvent -= this.FormatDocument;
                         _actionPanel.ChangeSheetNameEvent -= this.ChangeSheetName;
                         _actionPanel.InsertMultipleImagesEvent -= this.InsertMultipleImages;
@@ -544,6 +634,7 @@
 
                         // Đăng ký các event mới
                         _actionPanel.CreateEvidenceEvent += this.CreateEvidence;
+                        _actionPanel.FormatImagesEvent += this.FormatImages;
                         _actionPanel.FormatDocumentEvent += this.FormatDocument;
                         _actionPanel.ChangeSheetNameEvent += this.ChangeSheetName;
                         _actionPanel.InsertMultipleImagesEvent += this.InsertMultipleImages;
@@ -783,6 +874,8 @@
         {
             try
             {
+                var config = SheetConfigManager.GetGeneralConfig();
+
                 // Lấy Workbook hiện tại
                 var activeWorkbook = Globals.ThisAddIn.Application.ActiveWorkbook;
 
@@ -794,8 +887,8 @@
                         // Kích hoạt worksheet
                         worksheet.Activate();
 
-                        // Đặt zoom level về 100%
-                        Globals.ThisAddIn.Application.ActiveWindow.Zoom = 100;
+                        // Đặt zoom level từ config
+                        Globals.ThisAddIn.Application.ActiveWindow.Zoom = config.WindowZoom;
 
                         // Focus vào ô A1
                         worksheet.Range["A1"].Select();
@@ -1171,37 +1264,39 @@
         /// <returns></returns>
         private Worksheet CreateNewEvidenceSheet(Workbook activeWorkbook, string sheetName)
         {
+            var config = SheetConfigManager.GetGeneralConfig();
+
             // Tạo sheet mới
             Worksheet newWs = activeWorkbook.Worksheets.Add(Type.Missing, activeWorkbook.Worksheets[activeWorkbook.Worksheets.Count]);
             newWs.Name = sheetName;
 
-            newWs.Columns.ColumnWidth = 2.38;
-            newWs.Rows.RowHeight = 12.6;
+            newWs.Columns.ColumnWidth = config.ColumnWidth;
+            newWs.Rows.RowHeight = config.RowHeight;
 
             // Thiết lập font chữ cho toàn bộ sheet
             newWs.Cells.Font.Name = EVIDENCE_FONT_NAME;
-            newWs.Cells.Font.Size = 11;
+            newWs.Cells.Font.Size = config.FontSize;
 
             // Đặt giá trị vào ô AR1 để mở rộng used range
             int azColumnIndex = GetColumnIndex(PAGE_BREAK_COLUMN_NAME);
             newWs.Cells[1, azColumnIndex].Value2 = " ";
-            newWs.PageSetup.Orientation = XlPageOrientation.xlLandscape;
-            newWs.PageSetup.PaperSize = XlPaperSize.xlPaperA4;
+            newWs.PageSetup.Orientation = config.PageOrientation == "Landscape" ? XlPageOrientation.xlLandscape : XlPageOrientation.xlPortrait;
+            newWs.PageSetup.PaperSize = config.PaperSize == "A4" ? XlPaperSize.xlPaperA4 : XlPaperSize.xlPaperA3; // Add more cases if needed
             newWs.PageSetup.PrintArea = "$A$1:$" + PAGE_BREAK_COLUMN_NAME + "$" + PRINT_AREA_LAST_ROW_IDX.ToString();
-            newWs.PageSetup.Zoom = 100;
-            newWs.PageSetup.FitToPagesWide = false;
-            newWs.PageSetup.FitToPagesTall = false;
+            newWs.PageSetup.Zoom = config.Zoom;
+            newWs.PageSetup.FitToPagesWide = config.FitToPagesWide;
+            newWs.PageSetup.FitToPagesTall = config.FitToPagesTall;
 
             // Thiết lập lề trang tối ưu cho Windows (đơn vị: inches)
-            newWs.PageSetup.LeftMargin = newWs.Application.InchesToPoints(0.75);   // Lề trái
-            newWs.PageSetup.RightMargin = newWs.Application.InchesToPoints(0.75);  // Lề phải
-            newWs.PageSetup.TopMargin = newWs.Application.InchesToPoints(1);       // Lề trên
-            newWs.PageSetup.BottomMargin = newWs.Application.InchesToPoints(0.75); // Lề dưới
-            newWs.PageSetup.HeaderMargin = newWs.Application.InchesToPoints(0.5);  // Lề header
-            newWs.PageSetup.FooterMargin = newWs.Application.InchesToPoints(0.5);  // Lề footer
+            newWs.PageSetup.LeftMargin = newWs.Application.InchesToPoints(config.LeftMargin);   // Lề trái
+            newWs.PageSetup.RightMargin = newWs.Application.InchesToPoints(config.RightMargin);  // Lề phải
+            newWs.PageSetup.TopMargin = newWs.Application.InchesToPoints(config.TopMargin);       // Lề trên
+            newWs.PageSetup.BottomMargin = newWs.Application.InchesToPoints(config.BottomMargin); // Lề dưới
+            newWs.PageSetup.HeaderMargin = newWs.Application.InchesToPoints(config.HeaderMargin);  // Lề header
+            newWs.PageSetup.FooterMargin = newWs.Application.InchesToPoints(config.FooterMargin);  // Lề footer
 
             // Thiết lập center on page theo chiều horizontal
-            newWs.PageSetup.CenterHorizontally = true;
+            newWs.PageSetup.CenterHorizontally = config.CenterHorizontally;
 
             // Thiết lập view mode thành Page Break Preview
             try
@@ -1211,7 +1306,7 @@
                 {
                     window.View = XlWindowView.xlPageBreakPreview;
                     // Thiết lập zoom về 100%
-                    window.Zoom = 100;
+                    window.Zoom = config.WindowZoom;
                 }
             }
             catch (Exception viewEx)
@@ -1350,6 +1445,7 @@
         {
             try
             {
+                var config = SheetConfigManager.GetGeneralConfig();
                 Logger.Debug($"Adjusting print area for images in sheet: {worksheet.Name}");
 
                 // Tìm tất cả shapes trong worksheet để tính toán vùng in chính xác
@@ -1502,22 +1598,22 @@
                 Logger.Debug("Set page orientation to Landscape (fixed for A1:AZ format)");
 
                 // Thiết lập fit to page
-                worksheet.PageSetup.Zoom = 100; // Thiết lập scaling 100%
-                worksheet.PageSetup.FitToPagesWide = false; // Tắt FitToPagesWide
-                worksheet.PageSetup.FitToPagesTall = false; // Tắt FitToPagesTall
+                worksheet.PageSetup.Zoom = config.Zoom; // Thiết lập scaling từ config
+                worksheet.PageSetup.FitToPagesWide = config.FitToPagesWide; // Tắt FitToPagesWide
+                worksheet.PageSetup.FitToPagesTall = config.FitToPagesTall; // Tắt FitToPagesTall
 
                 // Thiết lập margins tối ưu cho hình ảnh với format A1:AZ
-                worksheet.PageSetup.LeftMargin = worksheet.Application.InchesToPoints(0.75);
-                worksheet.PageSetup.RightMargin = worksheet.Application.InchesToPoints(0.75);
-                worksheet.PageSetup.TopMargin = worksheet.Application.InchesToPoints(1);
-                worksheet.PageSetup.BottomMargin = worksheet.Application.InchesToPoints(0.75);
+                worksheet.PageSetup.LeftMargin = worksheet.Application.InchesToPoints(config.LeftMargin);
+                worksheet.PageSetup.RightMargin = worksheet.Application.InchesToPoints(config.RightMargin);
+                worksheet.PageSetup.TopMargin = worksheet.Application.InchesToPoints(config.TopMargin);
+                worksheet.PageSetup.BottomMargin = worksheet.Application.InchesToPoints(config.BottomMargin);
 
                 // Thiết lập center on page theo chiều horizontal
-                worksheet.PageSetup.CenterHorizontally = true;
+                worksheet.PageSetup.CenterHorizontally = config.CenterHorizontally;
 
-                // Thiết lập kích cỡ trang A4
-                worksheet.PageSetup.PaperSize = XlPaperSize.xlPaperA4;
-                Logger.Debug("Set paper size to A4 for A1:AZ print area");
+                // Thiết lập kích cỡ trang từ config
+                worksheet.PageSetup.PaperSize = config.PaperSize == "A4" ? XlPaperSize.xlPaperA4 : XlPaperSize.xlPaperA3; // Add more cases if needed
+                Logger.Debug($"Set paper size to {config.PaperSize} for A1:AZ print area");
             }
             catch (Exception ex)
             {

@@ -31,6 +31,26 @@ namespace ExcelCustomAddin
       public bool AutoFillCell { get; set; } = true;
       public bool EnableDebugLog { get; set; } = true;
       public int StartingNumber { get; set; } = 1;
+      public string PageBreakColumnName { get; set; } = "AR";
+      public string EvidenceFontName { get; set; } = "MS PGothic";
+      public int PrintAreaLastRowIdx { get; set; } = 38;
+      public double ColumnWidth { get; set; } = 2.38;
+      public double RowHeight { get; set; } = 12.6;
+      public int FontSize { get; set; } = 11;
+      public string PageOrientation { get; set; } = "Landscape";
+      public string PaperSize { get; set; } = "A4";
+      public int Zoom { get; set; } = 100;
+      public bool FitToPagesWide { get; set; } = false;
+      public bool FitToPagesTall { get; set; } = false;
+      public double LeftMargin { get; set; } = 0.75;
+      public double RightMargin { get; set; } = 0.75;
+      public double TopMargin { get; set; } = 1.0;
+      public double BottomMargin { get; set; } = 0.75;
+      public double HeaderMargin { get; set; } = 0.5;
+      public double FooterMargin { get; set; } = 0.5;
+      public bool CenterHorizontally { get; set; } = true;
+      public int WindowZoom { get; set; } = 100;
+      public string ViewMode { get; set; } = "PageBreakPreview";
     }
 
     /// <summary>
@@ -144,6 +164,57 @@ namespace ExcelCustomAddin
 
           if (int.TryParse(generalElement.Element("StartingNumber")?.Value, out int startNum))
             _generalConfig.StartingNumber = startNum;
+
+          _generalConfig.PageBreakColumnName = generalElement.Element("PageBreakColumnName")?.Value ?? "AR";
+          _generalConfig.EvidenceFontName = generalElement.Element("EvidenceFontName")?.Value ?? "MS PGothic";
+
+          if (int.TryParse(generalElement.Element("PrintAreaLastRowIdx")?.Value, out int lastRow))
+            _generalConfig.PrintAreaLastRowIdx = lastRow;
+
+          if (double.TryParse(generalElement.Element("ColumnWidth")?.Value, out double colWidth))
+            _generalConfig.ColumnWidth = colWidth;
+
+          if (double.TryParse(generalElement.Element("RowHeight")?.Value, out double rowHeight))
+            _generalConfig.RowHeight = rowHeight;
+
+          if (int.TryParse(generalElement.Element("FontSize")?.Value, out int fontSize))
+            _generalConfig.FontSize = fontSize;
+
+          _generalConfig.PageOrientation = generalElement.Element("PageOrientation")?.Value ?? "Landscape";
+          _generalConfig.PaperSize = generalElement.Element("PaperSize")?.Value ?? "A4";
+
+          if (int.TryParse(generalElement.Element("Zoom")?.Value, out int zoom))
+            _generalConfig.Zoom = zoom;
+
+          if (bool.TryParse(generalElement.Element("FitToPagesWide")?.Value, out bool fitWide))
+            _generalConfig.FitToPagesWide = fitWide;
+
+          if (bool.TryParse(generalElement.Element("FitToPagesTall")?.Value, out bool fitTall))
+            _generalConfig.FitToPagesTall = fitTall;
+
+          if (double.TryParse(generalElement.Element("LeftMargin")?.Value, out double leftMargin))
+            _generalConfig.LeftMargin = leftMargin;
+
+          if (double.TryParse(generalElement.Element("RightMargin")?.Value, out double rightMargin))
+            _generalConfig.RightMargin = rightMargin;
+
+          if (double.TryParse(generalElement.Element("TopMargin")?.Value, out double topMargin))
+            _generalConfig.TopMargin = topMargin;
+
+          if (double.TryParse(generalElement.Element("BottomMargin")?.Value, out double bottomMargin))
+            _generalConfig.BottomMargin = bottomMargin;
+
+          if (double.TryParse(generalElement.Element("HeaderMargin")?.Value, out double headerMargin))
+            _generalConfig.HeaderMargin = headerMargin;
+
+          if (double.TryParse(generalElement.Element("FooterMargin")?.Value, out double footerMargin))
+            _generalConfig.FooterMargin = footerMargin;
+
+          if (bool.TryParse(generalElement.Element("CenterHorizontally")?.Value, out bool centerH))
+            _generalConfig.CenterHorizontally = centerH;
+
+          if (int.TryParse(generalElement.Element("WindowZoom")?.Value, out int windowZoom))
+            _generalConfig.WindowZoom = windowZoom;
         }
 
         // Load Logging Settings
