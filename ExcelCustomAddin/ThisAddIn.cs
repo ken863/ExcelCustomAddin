@@ -1527,23 +1527,6 @@
         }
 
         /// <summary>
-        /// Chuyển đổi số cột thành chữ cái (A, B, C, ..., AA, AB, ...)
-        /// </summary>
-        /// <param name="columnNumber">Số cột (1-based)</param>
-        /// <returns>Chữ cái tương ứng</returns>
-        private string GetColumnLetter(int columnNumber)
-        {
-            string columnLetter = "";
-            while (columnNumber > 0)
-            {
-                columnNumber--;
-                columnLetter = (char)('A' + (columnNumber % 26)) + columnLetter;
-                columnNumber /= 26;
-            }
-            return columnLetter;
-        }
-
-        /// <summary>
         /// Chuyển đổi chữ cái cột thành số (A=1, B=2, ..., Z=26, AA=27, AB=28, ..., AZ=52, BA=53, ...)
         /// </summary>
         /// <param name="columnLetter">Chữ cái cột (A, B, C, ..., AA, AB, ...)</param>
