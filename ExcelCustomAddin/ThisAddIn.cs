@@ -414,6 +414,7 @@
         void Application_NewWorkbook(Workbook Wb)
         {
             Logger.Debug($"Application_NewWorkbook called for: {Wb?.Name}");
+            this.LoadTemplate(Wb);
             this.CreateActionsPane(Wb);
         }
 
@@ -424,6 +425,7 @@
         private void Application_WorkbookOpen(Workbook Wb)
         {
             Logger.Debug($"Application_WorkbookOpen called for: {Wb?.Name}");
+            this.LoadTemplate(Wb);
             this.CreateActionsPane(Wb);
         }
 
@@ -1110,30 +1112,22 @@
             Worksheet newWs = activeWorkbook.Worksheets.Add(Type.Missing, activeWorkbook.Worksheets[activeWorkbook.Worksheets.Count]);
             newWs.Name = sheetName;
 
-            // Đặt độ rộng cột sheet mới để page break tại cột AZ
-            // Tính toán: A4 Landscape = 11.69 inches chiều rộng
-            // Trừ margins (0.75 + 0.75 = 1.5 inches) = 10.19 inches khả dụng
-            // Cần điều chỉnh để fit đúng 52 cột (A-AZ) trên một trang
-            // Giảm column width để fit nhiều cột hơn trên một trang
-            newWs.Columns.ColumnWidth = 1.71;
-            newWs.Rows.RowHeight = 12.6; // Giảm chiều cao dòng để fit 36 dòng trên Windows
+            newWs.Columns.ColumnWidth = 2.38;
+            newWs.Rows.RowHeight = 12.6;
 
             // Thiết lập font chữ cho toàn bộ sheet
             newWs.Cells.Font.Name = "MS PGothic";
-            newWs.Cells.Font.Size = 11; // Giảm font size để fit 36 dòng trên Windows
+            newWs.Cells.Font.Size = 11;
 
-            // Thiết lập used range tới cột AZ (cột 52)
-            // Đặt giá trị vào ô AZ1 để mở rộng used range
-            int azColumnIndex = GetColumnIndex("AZ"); // AZ = 52
+            // Đặt giá trị vào ô AR1 để mở rộng used range
+            int azColumnIndex = GetColumnIndex("AR");
             newWs.Cells[1, azColumnIndex].Value2 = " ";
-
-            // Thiết lập trang in với định hướng ngang và lề trang tới cột AZ
             newWs.PageSetup.Orientation = XlPageOrientation.xlLandscape;
-            newWs.PageSetup.PaperSize = XlPaperSize.xlPaperA4; // Thiết lập kích cỡ giấy A4
-            newWs.PageSetup.PrintArea = "$A$1:$AZ$36"; // Thiết lập vùng in từ A1 đến AZ36
-            newWs.PageSetup.Zoom = 100; // Thiết lập scaling 100%
-            newWs.PageSetup.FitToPagesWide = false; // Tắt FitToPagesWide
-            newWs.PageSetup.FitToPagesTall = false; // Tắt FitToPagesTall
+            newWs.PageSetup.PaperSize = XlPaperSize.xlPaperA4;
+            newWs.PageSetup.PrintArea = "$A$1:$AR$36";
+            newWs.PageSetup.Zoom = 100;
+            newWs.PageSetup.FitToPagesWide = false;
+            newWs.PageSetup.FitToPagesTall = false;
 
             // Thiết lập lề trang tối ưu cho Windows (đơn vị: inches)
             newWs.PageSetup.LeftMargin = newWs.Application.InchesToPoints(0.75);   // Lề trái
@@ -1146,20 +1140,7 @@
             // Thiết lập center on page theo chiều horizontal
             newWs.PageSetup.CenterHorizontally = true;
 
-            // Thiết lập vertical page break tại cột BA (sau cột AZ=52)
-            // Điều này đảm bảo page break xảy ra đúng tại cột AZ
-            try
-            {
-                // Thêm vertical page break tại cột BA (cột 53, ngay sau AZ)
-                int baColumnIndex = GetColumnIndex("BA"); // BA = 53
-                Range pageBreakCell = newWs.Cells[1, baColumnIndex]; // Cột BA
-                newWs.VPageBreaks.Add(pageBreakCell);
-                Logger.Debug("Added vertical page break at column BA (after AZ)");
-            }
-            catch (Exception pageBreakEx)
-            {
-                Logger.Warning($"Error setting vertical page break: {pageBreakEx.Message}");
-            }            // Thiết lập view mode thành Page Break Preview
+            // Thiết lập view mode thành Page Break Preview
             try
             {
                 var window = newWs.Application.ActiveWindow;
@@ -1423,11 +1404,11 @@
                 }
 
                 // Cố định vùng in từ A1 đến AZ theo chiều cao của hình ảnh
-                int azColumnIndex = GetColumnIndex("AZ"); // AZ = 52
+                int azColumnIndex = GetColumnIndex("AR");
 
-                startColumn = aColumnIndex; // Luôn bắt đầu từ cột A
-                startRow = 1;    // Luôn bắt đầu từ dòng 1
-                endColumn = azColumnIndex;  // Cố định đến cột AZ (A=1, Z=26, AA=27, AZ=52)
+                startColumn = aColumnIndex;
+                startRow = 1;
+                endColumn = azColumnIndex;
 
                 // Tính toán endRow dựa trên vị trí thấp nhất của hình ảnh
                 if (maxBottom > 0)
@@ -1878,7 +1859,7 @@
         /// </summary>
         /// <param name="workbookName"></param>
         /// <param name="sheetName"></param>
-        public void TogglePinSheet(string workbookName, string sheetName)
+        public void TogglePinSheet(String workbookName, String sheetName)
         {
             if (!PinnedSheets.ContainsKey(workbookName))
             {
@@ -1908,10 +1889,80 @@
         /// <param name="workbookName"></param>
         /// <param name="sheetName"></param>
         /// <returns></returns>
-        public bool IsSheetPinned(string workbookName, string sheetName)
+        public bool IsSheetPinned(String workbookName, String sheetName)
         {
             return PinnedSheets.ContainsKey(workbookName) && PinnedSheets[workbookName].Contains(sheetName);
         }
         #endregion
+
+        /// <summary>
+        /// Load và áp dụng các template từ các đường dẫn được chỉ định, hỗ trợ các phiên bản khác nhau của Office
+        /// </summary>
+        public void LoadTemplate(Workbook wb)
+        {
+            try
+            {
+                // Lấy phiên bản Office hiện tại
+                var app = Globals.ThisAddIn.Application;
+                if (app == null)
+                {
+                    Logger.Error("Không thể truy cập ứng dụng Office.");
+                    return;
+                }
+
+                string officeVersion = app.Version;
+                string officeBasePath = "";
+
+                // Xác định đường dẫn cơ sở dựa trên phiên bản Office
+                switch (officeVersion)
+                {
+                    case "15.0": // Office 2013
+                        officeBasePath = "C:\\Program Files\\Microsoft Office\\Office15\\Document Themes 15";
+                        break;
+                    case "16.0": // Office 2016, Office 365
+                        officeBasePath = "C:\\Program Files\\Microsoft Office\\root\\Document Themes 16";
+                        break;
+                    default:
+                        Logger.Error($"Phiên bản Office không được hỗ trợ: {officeVersion}");
+                        return;
+                }
+
+                if (!System.IO.Directory.Exists(officeBasePath))
+                {
+                    Logger.Error("Không tìm thấy thư mục Document Themes. Vui lòng kiểm tra cài đặt Office.");
+                    return;
+                }
+
+                string themeColorsPath = System.IO.Path.Combine(officeBasePath, "Theme Colors", "Office 2007 - 2010.xml");
+                string themeFontsPath = System.IO.Path.Combine(officeBasePath, "Theme Fonts", "Office 2007 - 2010.xml");
+
+                // Kiểm tra sự tồn tại của các tệp
+                if (!System.IO.File.Exists(themeColorsPath))
+                {
+                    Logger.Error($"Không tìm thấy tệp Theme Colors tại: {themeColorsPath}");
+                    return;
+                }
+
+                if (!System.IO.File.Exists(themeFontsPath))
+                {
+                    Logger.Error($"Không tìm thấy tệp Theme Fonts tại: {themeFontsPath}");
+                    return;
+                }
+
+                Logger.Info("Bắt đầu áp dụng các template...");
+
+                // Áp dụng Theme Colors
+                wb.Theme.ThemeColorScheme.Load(themeColorsPath);
+                Logger.Info($"Đã áp dụng Theme Colors từ: {themeColorsPath}");
+
+                // Áp dụng Theme Fonts
+                wb.Theme.ThemeFontScheme.Load(themeFontsPath);
+                Logger.Info($"Đã áp dụng Theme Fonts từ: {themeFontsPath}");
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Có lỗi xảy ra khi áp dụng template: {ex.Message}", ex);
+            }
+        }
     }
 }

@@ -46,6 +46,7 @@
             this.btnChangeSheetName = new System.Windows.Forms.ToolStripMenuItem();
             this.btnPinSheet = new System.Windows.Forms.ToolStripMenuItem();
             this.btnInsertMultipleImages = new System.Windows.Forms.Button();
+            this.btnFormatImages = new System.Windows.Forms.Button();
             this.metroPanel1.SuspendLayout();
             this.toolStrip1.SuspendLayout();
             this.groupBox1.SuspendLayout();
@@ -97,6 +98,7 @@
             this.groupBox1.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this.groupBox1.BackColor = System.Drawing.Color.Transparent;
+            this.groupBox1.Controls.Add(this.btnFormatImages);
             this.groupBox1.Controls.Add(this.chkInsertOnNewPage);
             this.groupBox1.Controls.Add(this.numScalePercent);
             this.groupBox1.Controls.Add(this.btnInsertPictures);
@@ -104,7 +106,7 @@
             this.groupBox1.Font = new System.Drawing.Font("Segoe UI Semibold", 9F, System.Drawing.FontStyle.Bold);
             this.groupBox1.Location = new System.Drawing.Point(4, 108);
             this.groupBox1.Name = "groupBox1";
-            this.groupBox1.Size = new System.Drawing.Size(417, 118);
+            this.groupBox1.Size = new System.Drawing.Size(417, 169);
             this.groupBox1.TabIndex = 19;
             this.groupBox1.TabStop = false;
             this.groupBox1.Text = "Insert multiple images";
@@ -187,6 +189,7 @@
             this.imageList1.Images.SetKeyName(1, "documentation.png");
             this.imageList1.Images.SetKeyName(2, "Marcus-Roberto-Google-Play-Google-Translate.512.png");
             this.imageList1.Images.SetKeyName(3, "settings.png");
+            this.imageList1.Images.SetKeyName(4, "generative-image.png");
             // 
             // btnFormatDocument
             // 
@@ -216,9 +219,9 @@
             this.listofSheet.FullRowSelect = true;
             this.listofSheet.HeaderStyle = System.Windows.Forms.ColumnHeaderStyle.None;
             this.listofSheet.HideSelection = false;
-            this.listofSheet.Location = new System.Drawing.Point(3, 232);
+            this.listofSheet.Location = new System.Drawing.Point(3, 283);
             this.listofSheet.Name = "listofSheet";
-            this.listofSheet.Size = new System.Drawing.Size(418, 563);
+            this.listofSheet.Size = new System.Drawing.Size(418, 512);
             this.listofSheet.TabIndex = 13;
             this.listofSheet.UseCompatibleStateImageBehavior = false;
             this.listofSheet.View = System.Windows.Forms.View.Details;
@@ -253,6 +256,23 @@
             this.btnInsertMultipleImages.Name = "btnInsertMultipleImages";
             this.btnInsertMultipleImages.Size = new System.Drawing.Size(75, 23);
             this.btnInsertMultipleImages.TabIndex = 0;
+            // 
+            // btnFormatImages
+            // 
+            this.btnFormatImages.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.btnFormatImages.Font = new System.Drawing.Font("Segoe UI Semibold", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.btnFormatImages.ForeColor = System.Drawing.SystemColors.ActiveCaptionText;
+            this.btnFormatImages.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            this.btnFormatImages.ImageKey = "generative-image.png";
+            this.btnFormatImages.ImageList = this.imageList1;
+            this.btnFormatImages.Location = new System.Drawing.Point(6, 117);
+            this.btnFormatImages.Name = "btnFormatImages";
+            this.btnFormatImages.Size = new System.Drawing.Size(405, 46);
+            this.btnFormatImages.TabIndex = 21;
+            this.btnFormatImages.Text = "Format Images";
+            this.btnFormatImages.UseVisualStyleBackColor = true;
+            this.btnFormatImages.Click += new System.EventHandler(this.btnFormatImages_Click);
             // 
             // ActionPanelControl
             // 
@@ -291,5 +311,6 @@
         private System.Windows.Forms.ToolStrip toolStrip1;
         public System.Windows.Forms.ToolStripLabel toolStripFilePath;
         public MetroFramework.Controls.MetroCheckBox chkInsertOnNewPage;
+        private System.Windows.Forms.Button btnFormatImages;
     }
 }

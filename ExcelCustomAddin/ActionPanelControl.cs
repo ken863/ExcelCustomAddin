@@ -149,6 +149,7 @@ namespace ExcelCustomAddin
         public event EventHandler FormatDocumentEvent;
         public event EventHandler ChangeSheetNameEvent;
         public event EventHandler InsertMultipleImagesEvent;
+        public event EventHandler FormatImagesEvent;
 
         public event EventHandler<PinSheetEventArgs> PinSheetEvent;
 
@@ -487,5 +488,11 @@ namespace ExcelCustomAddin
 
         private Timer _saveTimer;
         #endregion
+
+        private void btnFormatImages_Click(object sender, EventArgs e)
+        {
+            if (this.FormatImagesEvent != null)
+                this.FormatImagesEvent(this, e);
+        }
     }
 }
