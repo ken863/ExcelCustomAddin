@@ -33,6 +33,7 @@ namespace ExcelCustomAddin
       public int StartingNumber { get; set; } = 1;
       public string PageBreakColumnName { get; set; } = "AR";
       public string EvidenceFontName { get; set; } = "MS PGothic";
+      public string BackButtonFontName { get; set; } = "Calibri";
       public int PrintAreaLastRowIdx { get; set; } = 38;
       public double ColumnWidth { get; set; } = 2.38;
       public double RowHeight { get; set; } = 12.6;
@@ -167,6 +168,7 @@ namespace ExcelCustomAddin
 
           _generalConfig.PageBreakColumnName = generalElement.Element("PageBreakColumnName")?.Value ?? "AR";
           _generalConfig.EvidenceFontName = generalElement.Element("EvidenceFontName")?.Value ?? "MS PGothic";
+          _generalConfig.BackButtonFontName = generalElement.Element("BackButtonFontName")?.Value ?? "Calibri";
 
           if (int.TryParse(generalElement.Element("PrintAreaLastRowIdx")?.Value, out int lastRow))
             _generalConfig.PrintAreaLastRowIdx = lastRow;

@@ -1154,7 +1154,8 @@
             }
 
             existingSheet.Hyperlinks.Add(backCell, "", backAddress, Type.Missing, "<Back");
-            backCell.Font.Name = EVIDENCE_FONT_NAME;
+            var config = SheetConfigManager.GetGeneralConfig();
+            backCell.Font.Name = config.BackButtonFontName;
         }
 
         /// <summary>
@@ -1215,7 +1216,8 @@
             }
 
             newSheet.Hyperlinks.Add(backCell, "", backAddress, Type.Missing, "<Back");
-            backCell.Font.Name = EVIDENCE_FONT_NAME;
+            var config = SheetConfigManager.GetGeneralConfig();
+            backCell.Font.Name = config.BackButtonFontName;
         }
 
         /// <summary>

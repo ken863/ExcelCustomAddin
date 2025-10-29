@@ -41,6 +41,9 @@
     <!-- Font name cho evidence sheets -->
     <EvidenceFontName>MS PGothic</EvidenceFontName>
     
+    <!-- Font name cho back button -->
+    <BackButtonFontName>Calibri</BackButtonFontName>
+    
     <!-- Last row index cho print area -->
     <PrintAreaLastRowIdx>38</PrintAreaLastRowIdx>
     
