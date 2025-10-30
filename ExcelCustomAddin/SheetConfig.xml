@@ -75,7 +75,7 @@
     <LeftMargin>0.75</LeftMargin>
     <RightMargin>0.75</RightMargin>
     <TopMargin>1.0</TopMargin>
-    <BottomMargin>0.75</BottomMargin>
+    <BottomMargin>1.0</BottomMargin>
     <HeaderMargin>0.5</HeaderMargin>
     <FooterMargin>0.5</FooterMargin>
     

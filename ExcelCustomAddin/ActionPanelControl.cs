@@ -494,5 +494,10 @@ namespace ExcelCustomAddin
             if (this.FormatImagesEvent != null)
                 this.FormatImagesEvent(this, e);
         }
+
+        private void cbAutoFixWidth_CheckedChanged(object sender, EventArgs e)
+        {
+            numScalePercent.Enabled = cbScalePercent.Checked;
+        }
     }
 }

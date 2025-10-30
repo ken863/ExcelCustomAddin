@@ -125,6 +125,67 @@
         }
 
         /// <summary>
+        /// Tính toán tỷ lệ scale tự động dựa trên print area
+        /// </summary>
+        /// <param name="worksheet">Worksheet chứa hình ảnh</param>
+        /// <param name="imageWidth">Chiều rộng gốc của hình ảnh</param>
+        /// <returns>Tỷ lệ scale (0.0 - 1.0)</returns>
+        private double CalculateAutoScaleRate(Worksheet worksheet, double imageWidth)
+        {
+            try
+            {
+                // Lấy chiều rộng của print area (từ cột A đến PAGE_BREAK_COLUMN_NAME)
+                int startColumn = GetColumnIndex("A");
+                int endColumn = GetColumnIndex(PAGE_BREAK_COLUMN_NAME);
+
+                double printAreaWidth = 0;
+                for (int col = startColumn; col <= endColumn; col++)
+                {
+                    Range columnRange = worksheet.Cells[1, col];
+                    printAreaWidth += (double)columnRange.Width;
+                }
+
+                // Trừ đi chiều rộng của 2 cột (margin trái và phải)
+                double availableWidth = printAreaWidth - (2 * (double)worksheet.Cells[1, 1].Width);
+
+                // Tính tỷ lệ scale
+                double scaleRate = availableWidth / imageWidth;
+
+                // Giới hạn tỷ lệ trong khoảng hợp lý (10% - 100%)
+                scaleRate = Math.Max(0.1, Math.Min(1.0, scaleRate));
+
+                Logger.Debug($"Auto scale calculation: PrintAreaWidth={printAreaWidth:F1}, AvailableWidth={availableWidth:F1}, ImageWidth={imageWidth:F1}, ScaleRate={scaleRate:F3}");
+
+                return scaleRate;
+            }
+            catch (Exception ex)
+            {
+                Logger.Warning($"Error calculating auto scale rate: {ex.Message}, using default 1.0");
+                return 1.0;
+            }
+        }
+
+        /// <summary>
+        /// Lấy tỷ lệ scale dựa trên cài đặt auto fix width
+        /// </summary>
+        /// <param name="worksheet">Worksheet hiện tại</param>
+        /// <param name="imageWidth">Chiều rộng gốc của hình ảnh (đối với auto scale)</param>
+        /// <returns>Tỷ lệ scale</returns>
+        private double GetScaleRate(Worksheet worksheet, double imageWidth = 0)
+        {
+            if (_actionPanel.cbAutoFixWidth.Checked)
+            {
+                // Tự động tính toán tỷ lệ dựa trên print area
+                return CalculateAutoScaleRate(worksheet, imageWidth);
+            }
+            else
+            {
+                // Sử dụng tỷ lệ từ numScalePercent
+                return (double)_actionPanel.numScalePercent.Value / 100.0;
+            }
+        }
+
+        /// <summary>
         /// FormatImages
         /// </summary>
         /// <param name="sender"></param>
@@ -134,6 +195,7 @@
             try
             {
                 var app = Globals.ThisAddIn.Application;
+                var activeSheet = app.ActiveSheet as Worksheet; // <-- Add this line
 
                 // Lấy các shape đã chọn
                 ShapeRange selectedShapes = null;
@@ -155,15 +217,16 @@
                     return;
                 }
 
-                // Lấy tỷ lệ scale từ action panel
-                double scalePercent = (double)_actionPanel.numScalePercent.Value / 100.0;
-
+                // Lấy tỷ lệ scale từ action panel hoặc tự động tính toán
                 int formattedCount = 0;
-                foreach (Microsoft.Office.Interop.Excel.Shape shape in selectedShapes)
+                foreach (Shape shape in selectedShapes)
                 {
                     try
                     {
-                        // 1. Scale theo numScalePercent
+                        // Lấy tỷ lệ scale cho hình ảnh này
+                        double scalePercent = (double)_actionPanel.numScalePercent.Value / 100.0;
+
+                        // 1. Scale theo tỷ lệ đã tính
                         shape.LockAspectRatio = Microsoft.Office.Core.MsoTriState.msoTrue;
                         shape.Height = (float)(shape.Height * scalePercent);
 
@@ -267,7 +330,6 @@
                 }
 
                 // Khởi tạo các biến cần thiết
-                double resizeRate = (double)(_actionPanel.numScalePercent.Value / 100);
                 bool insertOnNewPage = _actionPanel.chkInsertOnNewPage.Checked;
                 Logger.Info($"Insert on new page mode: {insertOnNewPage}");
 
@@ -283,7 +345,7 @@
                 {
                     try
                     {
-                        // Bước 1: Tải hình ảnh tạm thời để lấy chiều cao sau khi resize
+                        // Bước 1: Tải hình ảnh tạm thời để lấy kích thước gốc
                         var tempShape = activeSheet.Shapes.AddPicture(
                             imagePath,
                             Microsoft.Office.Core.MsoTriState.msoFalse,
@@ -291,6 +353,11 @@
                             0, 0, -1, -1
                         );
                         tempShape.LockAspectRatio = Microsoft.Office.Core.MsoTriState.msoTrue;
+
+                        // Lấy tỷ lệ scale cho hình ảnh này
+                        double resizeRate = GetScaleRate(activeSheet, tempShape.Width);
+
+                        // Áp dụng tỷ lệ scale để lấy kích thước sau khi resize
                         tempShape.Height = (float)(tempShape.Height * resizeRate);
                         double imageHeight = tempShape.Height;
                         tempShape.Delete(); // Xóa hình tạm
