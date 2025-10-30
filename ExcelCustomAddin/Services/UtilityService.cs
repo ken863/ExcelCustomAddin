@@ -1,5 +1,6 @@
 using Microsoft.Office.Interop.Excel;
 using System;
+using System.Linq;
 using System.Text.RegularExpressions;
 
 namespace ExcelCustomAddin
@@ -197,7 +198,8 @@ namespace ExcelCustomAddin
     }
 
     /// <summary>
-    /// Create or get named range for a cell
+    /// Create or get named range for a cell using cell value as name
+    /// Handles special cell types and provides robust fallback logic
     /// </summary>
     public static string GetOrCreateNamedRangeForCell(Range cell, Worksheet worksheet)
     {
@@ -207,7 +209,25 @@ namespace ExcelCustomAddin
       try
       {
         string cellAddress = cell.Address[false, false];
-        string proposedName = $"BackTo_{worksheet.Name}_{cellAddress.Replace("$", "").Replace(":", "_")}";
+
+        // Determine cell type and extract appropriate value
+        string cellValue = ExtractCellValueForNaming(cell);
+
+        // Sanitize cell value để tạo tên hợp lệ
+        string proposedName = SanitizeForNamedRange(cellValue);
+
+        // Multiple fallback strategies if sanitization fails
+        if (string.IsNullOrEmpty(proposedName))
+        {
+          // Fallback 1: Try to use cell address
+          proposedName = SanitizeForNamedRange(cellAddress.Replace("$", "").Replace(":", "_"));
+        }
+
+        if (string.IsNullOrEmpty(proposedName))
+        {
+          // Fallback 2: Use generic cell reference
+          proposedName = $"Cell_{cellAddress.Replace("$", "").Replace(":", "_")}";
+        }
 
         // Ensure name is valid and unique
         string validName = EnsureUniqueRangeName(proposedName, worksheet.Application.ActiveWorkbook);
@@ -216,7 +236,7 @@ namespace ExcelCustomAddin
         {
           // Create the named range
           worksheet.Application.ActiveWorkbook.Names.Add(validName, cell, true);
-          Logger.Debug($"Created named range '{validName}' for cell {cellAddress}");
+          Logger.Debug($"Created named range '{validName}' for cell {cellAddress} with value '{cellValue}'");
           return validName;
         }
       }
@@ -229,8 +249,164 @@ namespace ExcelCustomAddin
     }
 
     /// <summary>
-    /// Create named range with validation
+    /// Extract appropriate value from cell for naming purposes
+    /// Handles different cell types intelligently
     /// </summary>
+    public static string ExtractCellValueForNaming(Range cell)
+    {
+      if (cell == null)
+        return string.Empty;
+
+      try
+      {
+        // Check if cell has a formula
+        if (!string.IsNullOrEmpty(cell.Formula?.ToString()) && cell.Formula.ToString().StartsWith("="))
+        {
+          // For formula cells, try to get displayed text or use formula type
+          string displayedText = cell.Text?.ToString()?.Trim();
+          if (!string.IsNullOrEmpty(displayedText) && displayedText != cell.Formula.ToString())
+          {
+            return displayedText;
+          }
+          // If formula result is same as formula, classify by formula type
+          return ClassifyFormulaType(cell.Formula.ToString());
+        }
+
+        // Try to get cell value
+        object cellValue = cell.Value2;
+        if (cellValue != null)
+        {
+          string stringValue = cellValue.ToString().Trim();
+
+          // Handle different data types
+          if (double.TryParse(stringValue, out double numValue))
+          {
+            return numValue.ToString(); // Keep as number for SanitizeForNamedRange to handle
+          }
+
+          if (bool.TryParse(stringValue, out bool boolValue))
+          {
+            return boolValue.ToString().ToUpper(); // TRUE or FALSE
+          }
+
+          if (DateTime.TryParse(stringValue, out DateTime dateValue))
+          {
+            return dateValue.ToString("yyyy-MM-dd"); // Standardized date format
+          }
+
+          return stringValue;
+        }
+
+        // If no value, try to get displayed text
+        string textValue = cell.Text?.ToString()?.Trim();
+        if (!string.IsNullOrEmpty(textValue))
+        {
+          return textValue;
+        }
+
+        // Last resort: empty string
+        return string.Empty;
+      }
+      catch (Exception ex)
+      {
+        Logger.Warning($"Error extracting value from cell {cell?.Address[false, false]}: {ex.Message}");
+        return string.Empty;
+      }
+    }
+
+    /// <summary>
+    /// Classify formula type for naming purposes
+    /// </summary>
+    private static string ClassifyFormulaType(string formula)
+    {
+      if (string.IsNullOrEmpty(formula))
+        return "Formula";
+
+      string upperFormula = formula.ToUpper();
+
+      if (upperFormula.Contains("SUM(")) return "Sum_Formula";
+      if (upperFormula.Contains("COUNT(")) return "Count_Formula";
+      if (upperFormula.Contains("AVERAGE(")) return "Average_Formula";
+      if (upperFormula.Contains("IF(")) return "Conditional_Formula";
+      if (upperFormula.Contains("VLOOKUP(")) return "Lookup_Formula";
+      if (upperFormula.Contains("INDEX(")) return "Index_Formula";
+      if (upperFormula.Contains("MATCH(")) return "Match_Formula";
+
+      return "Formula";
+    }
+    public static string SanitizeForNamedRange(string input)
+    {
+      if (string.IsNullOrEmpty(input))
+        return string.Empty;
+
+      string sanitized = input.Trim();
+
+      // Handle special cell value types
+      if (sanitized.StartsWith("="))
+      {
+        // Formula - extract meaningful part or use generic name
+        return "Formula_Range";
+      }
+
+      // Handle boolean values
+      if (sanitized.Equals("TRUE", StringComparison.OrdinalIgnoreCase))
+        return "Bool_True";
+      if (sanitized.Equals("FALSE", StringComparison.OrdinalIgnoreCase))
+        return "Bool_False";
+
+      // Handle pure numeric values
+      if (double.TryParse(sanitized, out double numericValue))
+      {
+        return $"Num_{numericValue}";
+      }
+
+      // Handle date/time values (if they come as strings)
+      if (DateTime.TryParse(sanitized, out DateTime dateValue))
+      {
+        return $"Date_{dateValue:yyyy_MM_dd}";
+      }
+
+      // Check for Excel reserved keywords
+      string[] excelKeywords = { "R", "C", "TRUE", "FALSE", "AND", "OR", "NOT", "IF", "SUM", "COUNT", "AVERAGE", "MIN", "MAX" };
+      if (Array.Exists(excelKeywords, keyword => keyword.Equals(sanitized, StringComparison.OrdinalIgnoreCase)))
+      {
+        return $"{sanitized}_Range";
+      }
+
+      // Replace invalid characters with underscores
+      sanitized = Regex.Replace(sanitized, @"[^a-zA-Z0-9_]", "_");
+
+      // Remove multiple consecutive underscores
+      sanitized = Regex.Replace(sanitized, @"_+", "_");
+
+      // Remove leading/trailing underscores and numbers
+      sanitized = sanitized.Trim('_');
+
+      // If empty after sanitization, return empty (will use fallback)
+      if (string.IsNullOrEmpty(sanitized))
+        return string.Empty;
+
+      // Ensure it starts with a letter (not a number or underscore)
+      if (char.IsDigit(sanitized[0]) || sanitized[0] == '_')
+      {
+        sanitized = $"R_{sanitized}";
+      }
+
+      // Handle very short names (less than 2 characters)
+      if (sanitized.Length < 2)
+      {
+        sanitized = $"Short_{sanitized}";
+      }
+
+      // Limit length to 255 characters and ensure it doesn't end with underscore
+      if (sanitized.Length > 255)
+      {
+        sanitized = sanitized.Substring(0, 255).TrimEnd('_');
+      }
+
+      // Final check - ensure it's not empty and valid
+      return IsValidNamedRangeName(sanitized) ? sanitized : string.Empty;
+    }
     public static bool CreateNamedRange(Workbook workbook, string name, string address)
     {
       if (workbook == null || string.IsNullOrEmpty(name) || string.IsNullOrEmpty(address))
