@@ -274,31 +274,31 @@
     can be found.
   -->
   <ItemGroup>
-    <Compile Include="ActionPanelControl.cs">
+    <Compile Include="Controls\ActionPanelControl.cs">
       <SubType>UserControl</SubType>
     </Compile>
-    <Compile Include="ActionPanelControl.Designer.cs">
+    <Compile Include="Controls\ActionPanelControl.Designer.cs">
       <DependentUpon>ActionPanelControl.cs</DependentUpon>
     </Compile>
-    <Compile Include="ApplicationLifecycleService.cs" />
-    <Compile Include="EvidenceCreationService.cs" />
-    <Compile Include="ImageProcessingService.cs" />
-    <Compile Include="ManageTaskPaneRibbon.cs">
+    <Compile Include="Services\ApplicationLifecycleService.cs" />
+    <Compile Include="Services\EvidenceCreationService.cs" />
+    <Compile Include="Services\ImageProcessingService.cs" />
+    <Compile Include="Controls\ManageTaskPaneRibbon.cs">
       <SubType>Component</SubType>
     </Compile>
-    <Compile Include="ManageTaskPaneRibbon.Designer.cs">
+    <Compile Include="Controls\ManageTaskPaneRibbon.Designer.cs">
       <DependentUpon>ManageTaskPaneRibbon.cs</DependentUpon>
     </Compile>
     <Compile Include="Properties\AssemblyInfo.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="SheetInfo.cs" />
-    <Compile Include="SheetManagementService.cs" />
-    <Compile Include="UtilityService.cs" />
-    <EmbeddedResource Include="ActionPanelControl.resx">
+    <Compile Include="Models\SheetInfo.cs" />
+    <Compile Include="Services\SheetManagementService.cs" />
+    <Compile Include="Services\UtilityService.cs" />
+    <EmbeddedResource Include="Controls\ActionPanelControl.resx">
       <DependentUpon>ActionPanelControl.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="ManageTaskPaneRibbon.resx">
+    <EmbeddedResource Include="Controls\ManageTaskPaneRibbon.resx">
       <DependentUpon>ManageTaskPaneRibbon.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Properties\Resources.resx">
@@ -322,9 +322,9 @@
       <DependentUpon>Settings.settings</DependentUpon>
       <DesignTimeSharedInput>True</DesignTimeSharedInput>
     </Compile>
-    <Compile Include="SheetConfigManager.cs" />
-    <Compile Include="Logger.cs" />
-    <Compile Include="TaskPaneManager.cs" />
+    <Compile Include="Services\SheetConfigManager.cs" />
+    <Compile Include="Utilities\Logger.cs" />
+    <Compile Include="Utilities\TaskPaneManager.cs" />
     <Compile Include="ThisAddIn.cs">
       <SubType>Code</SubType>
     </Compile>
@@ -344,8 +344,7 @@
     <None Include="Resources\settings.png" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="MetroFramework.txt" />
-    <Content Include="SheetConfig.xml">
+    <Content Include="Configs\SheetConfig.xml">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <None Include="Resources\pictures.png" />

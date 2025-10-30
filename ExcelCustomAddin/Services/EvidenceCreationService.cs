@@ -417,15 +417,6 @@ namespace ExcelCustomAddin
         MessageBox.Show($"Có lỗi xảy ra: {errorMessages[0]}", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
         return;
       }
-
-      if (createdSheets.Count > 0)
-      {
-        MessageBox.Show($"Đã tạo sheet '{createdSheets[0]}' thành công.", "Hoàn thành", MessageBoxButton.OK, MessageBoxImage.Information);
-      }
-      else if (existingSheets.Count > 0)
-      {
-        MessageBox.Show($"Đã tạo hyperlink đến sheet '{existingSheets[0]}' đã tồn tại.", "Hoàn thành", MessageBoxButton.OK, MessageBoxImage.Information);
-      }
     }
 
     /// <summary>
