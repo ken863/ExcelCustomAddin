@@ -6,21 +6,61 @@ using System.Windows;
 namespace ExcelCustomAddin
 {
   /// <summary>
-  /// Service xử lý các chức năng quản lý sheet
+  /// SheetManagementService - Quản lý các chức năng liên quan đến sheet
+  ///
+  /// Chức năng chính:
+  /// - Đổi tên sheet với validation và hyperlink updates
+  /// - Quản lý danh sách sheet với pin/unpin functionality
+  /// - Activate sheet từ ActionPanel selection
+  /// - Format document (zoom và scroll settings)
+  /// - Debounced selection changes để tránh recursive updates
+  ///
+  /// Tính năng đặc biệt:
+  /// - Pin sheets: Giữ sheets quan trọng ở đầu danh sách
+  /// - Hyperlink updates: Tự động cập nhật khi đổi tên sheet
+  /// - Debounce: Tránh recursive activation khi selection changes
+  /// - Sheet validation: Kiểm tra tên hợp lệ và không trùng lặp
+  ///
+  /// Tác giả: lam.pt
+  /// Ngày tạo: 2025
   /// </summary>
   public class SheetManagementService
   {
+    #region Fields
+
     private readonly ThisAddIn _addIn;
-    // debounce for list selection changes
+
+    // Debounce cho selection changes để tránh recursive updates
     private DateTime lastSelectionChangeTime = DateTime.MinValue;
 
-    public SheetManagementService(ThisAddIn addIn)
-    {
-      _addIn = addIn;
-    }
+    #endregion
+
+    #region Constructor
 
     /// <summary>
-    /// ChangeSheetName - Đổi tên sheet
+    /// Khởi tạo SheetManagementService
+    ///
+    /// </summary>
+    /// <param name="addIn">Instance của ThisAddIn chính</param>
+    public SheetManagementService(ThisAddIn addIn)
+    {
+      _addIn = addIn ?? throw new ArgumentNullException(nameof(addIn));
+    }
+
+    #endregion
+
+    #region Public Interface
+
+    /// <summary>
+    /// ChangeSheetName - Đổi tên sheet được chọn từ ActionPanel
+    ///
+    /// Quy trình:
+    /// 1. Validate workbook và selection từ ActionPanel
+    /// 2. Hiển thị input dialog để nhập tên mới
+    /// 3. Validate tên mới (độ dài, ký tự hợp lệ, không trùng)
+    /// 4. Đổi tên sheet và cập nhật tất cả hyperlinks
+    /// 5. Refresh ActionPanel UI
+    ///
     /// </summary>
     public void ChangeSheetName()
     {
@@ -197,8 +237,94 @@ namespace ExcelCustomAddin
     }
 
     /// <summary>
-    /// Build and return the list of sheet info for the active workbook
+    /// FormatDocument - Định dạng toàn bộ document với zoom và scroll settings
+    ///
+    /// Áp dụng cho tất cả worksheets:
+    /// - Set zoom level từ config
+    /// - Scroll to top-left (A1)
+    /// - Activate từng sheet để apply settings
+    ///
     /// </summary>
+    public void FormatDocument()
+    {
+      try
+      {
+        var config = SheetConfigManager.GetGeneralConfig();
+
+        // Lấy Workbook hiện tại
+        var activeWorkbook = Globals.ThisAddIn.Application.ActiveWorkbook;
+
+        if (activeWorkbook != null)
+        {
+          // Duyệt qua tất cả các worksheet trong workbook
+          foreach (Worksheet worksheet in activeWorkbook.Worksheets)
+          {
+            // Kích hoạt worksheet
+            worksheet.Activate();
+
+            // Đặt zoom level từ config
+            Globals.ThisAddIn.Application.ActiveWindow.Zoom = config.WindowZoom;
+
+            // Focus vào ô A1
+            worksheet.Range["A1"].Select();
+
+            // Đảm bảo ô A1 hiển thị ở góc trên bên trái
+            Globals.ThisAddIn.Application.ActiveWindow.ScrollRow = 1;
+            Globals.ThisAddIn.Application.ActiveWindow.ScrollColumn = 1;
+          }
+
+          // Kích hoạt lại worksheet đầu tiên sau khi format xong
+          if (activeWorkbook.Worksheets.Count > 0)
+          {
+            ((Worksheet)activeWorkbook.Worksheets[1]).Activate();
+            activeWorkbook.Worksheets[1].Range["A1"].Select();
+          }
+        }
+      }
+      catch (Exception ex)
+      {
+        Logger.Error($"Lỗi khi format document: {ex.Message}", ex);
+        MessageBox.Show($"Lỗi khi format document: {ex.Message}", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+      }
+    }
+
+    /// <summary>
+    /// PinSheet - Toggle pin status của sheet
+    ///
+    /// </summary>
+    /// <param name="e">Event args chứa tên sheet cần pin/unpin</param>
+    public void PinSheet(ActionPanelControl.PinSheetEventArgs e)
+    {
+      try
+      {
+        var activeWorkbook = Globals.ThisAddIn.Application.ActiveWorkbook;
+        if (activeWorkbook == null)
+        {
+          Logger.Error("Không có workbook nào đang mở trong PinSheet");
+          MessageBox.Show("Không có workbook nào đang mở.", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+          return;
+        }
+
+        string workbookName = activeWorkbook.Name;
+        TogglePinSheet(workbookName, e.SheetName);
+      }
+      catch (Exception ex)
+      {
+        Logger.Error($"Có lỗi xảy ra khi ghim/bỏ ghim sheet: {ex.Message}", ex);
+        MessageBox.Show($"Có lỗi xảy ra khi ghim/bỏ ghim sheet: {ex.Message}", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+      }
+    }
+
+    #endregion
+
+    #region Sheet List Management
+
+    /// <summary>
+    /// Build and return the list of sheet info for the active workbook
+    /// Bao gồm thông tin pin status và tab color
+    ///
+    /// </summary>
+    /// <returns>Danh sách SheetInfo được sort với pinned sheets ở đầu</returns>
     public System.Collections.Generic.List<SheetInfo> GetListOfSheet()
     {
       var sheetInfoList = new System.Collections.Generic.List<SheetInfo>();
@@ -248,7 +374,9 @@ namespace ExcelCustomAddin
 
     /// <summary>
     /// Find index in the ActionPanel list for the currently active sheet
+    ///
     /// </summary>
+    /// <returns>Index của active sheet trong list, -1 nếu không tìm thấy</returns>
     public int FindIndexOfSelectedSheet()
     {
       if (_addIn._actionPanel?.listofSheet?.Items == null) return -1;
@@ -267,8 +395,14 @@ namespace ExcelCustomAddin
       return -1;
     }
 
+    #endregion
+
+    #region Sheet Activation
+
     /// <summary>
     /// Activate the sheet selected from ActionPanel list
+    /// Tìm và activate sheet theo tên từ selection
+    ///
     /// </summary>
     public void SetActiveSheet()
     {
@@ -303,7 +437,11 @@ namespace ExcelCustomAddin
 
     /// <summary>
     /// Selection changed handler for the ActionPanel list - includes debounce
+    /// Sử dụng debounce để tránh recursive activation loops
+    ///
     /// </summary>
+    /// <param name="sender">Event sender</param>
+    /// <param name="e">Event args</param>
     public void ListOfSheet_SelectionChanged(object sender, EventArgs e)
     {
       if (_addIn.IsSheetActivating)
@@ -330,34 +468,28 @@ namespace ExcelCustomAddin
       });
     }
 
-    /// <summary>
-    /// PinSheet - Toggle pin status của sheet
-    /// </summary>
-    public void PinSheet(ActionPanelControl.PinSheetEventArgs e)
-    {
-      try
-      {
-        var activeWorkbook = Globals.ThisAddIn.Application.ActiveWorkbook;
-        if (activeWorkbook == null)
-        {
-          Logger.Error("Không có workbook nào đang mở trong PinSheet");
-          MessageBox.Show("Không có workbook nào đang mở.", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
-          return;
-        }
+    #endregion
 
-        string workbookName = activeWorkbook.Name;
-        TogglePinSheet(workbookName, e.SheetName);
-      }
-      catch (Exception ex)
-      {
-        Logger.Error($"Có lỗi xảy ra khi ghim/bỏ ghim sheet: {ex.Message}", ex);
-        MessageBox.Show($"Có lỗi xảy ra khi ghim/bỏ ghim sheet: {ex.Message}", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
-      }
-    }
+    #region Pin Management
 
     /// <summary>
     /// Toggle pin status của sheet
+    /// Thread-safe với lock để tránh race conditions
+    ///
     /// </summary>
+    /// <param name="workbookName">Tên workbook</param>
+    /// <param name="sheetName">Tên sheet cần toggle</param>
+    public void TogglePinSheet(string workbookName, string sheetName)
+    {
+      TogglePinSheetPrivate(workbookName, sheetName);
+    }
+
+    /// <summary>
+    /// Private implementation của TogglePinSheet với thread safety
+    ///
+    /// </summary>
+    /// <param name="workbookName">Tên workbook</param>
+    /// <param name="sheetName">Tên sheet cần toggle</param>
     private void TogglePinSheetPrivate(string workbookName, string sheetName)
     {
       lock (ThisAddIn._lockObject)
@@ -391,65 +523,17 @@ namespace ExcelCustomAddin
     }
 
     /// <summary>
-    /// FormatDocument - Định dạng toàn bộ document
+    /// Kiểm tra sheet có được pin không
+    ///
     /// </summary>
-    public void FormatDocument()
-    {
-      try
-      {
-        var config = SheetConfigManager.GetGeneralConfig();
-
-        // Lấy Workbook hiện tại
-        var activeWorkbook = Globals.ThisAddIn.Application.ActiveWorkbook;
-
-        if (activeWorkbook != null)
-        {
-          // Duyệt qua tất cả các worksheet trong workbook
-          foreach (Worksheet worksheet in activeWorkbook.Worksheets)
-          {
-            // Kích hoạt worksheet
-            worksheet.Activate();
-
-            // Đặt zoom level từ config
-            Globals.ThisAddIn.Application.ActiveWindow.Zoom = config.WindowZoom;
-
-            // Focus vào ô A1
-            worksheet.Range["A1"].Select();
-
-            // Đảm bảo ô A1 hiển thị ở góc trên bên trái
-            Globals.ThisAddIn.Application.ActiveWindow.ScrollRow = 1;
-            Globals.ThisAddIn.Application.ActiveWindow.ScrollColumn = 1;
-          }
-
-          // Kích hoạt lại worksheet đầu tiên sau khi format xong
-          if (activeWorkbook.Worksheets.Count > 0)
-          {
-            ((Worksheet)activeWorkbook.Worksheets[1]).Activate();
-            activeWorkbook.Worksheets[1].Range["A1"].Select();
-          }
-        }
-      }
-      catch (Exception ex)
-      {
-        Logger.Error($"Lỗi khi format document: {ex.Message}", ex);
-        MessageBox.Show($"Lỗi khi format document: {ex.Message}", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
-      }
-    }
-
-    /// <summary>
-    /// Public method để toggle pin status của sheet
-    /// </summary>
-    public void TogglePinSheet(string workbookName, string sheetName)
-    {
-      TogglePinSheetPrivate(workbookName, sheetName);
-    }
-
-    /// <summary>
-    /// Public method để kiểm tra sheet có được pin không
-    /// </summary>
+    /// <param name="workbookName">Tên workbook</param>
+    /// <param name="sheetName">Tên sheet cần kiểm tra</param>
+    /// <returns>true nếu sheet được pin, false nếu không</returns>
     public bool IsSheetPinned(string workbookName, string sheetName)
     {
       return ThisAddIn.PinnedSheets.ContainsKey(workbookName) && ThisAddIn.PinnedSheets[workbookName].Contains(sheetName);
     }
+
+    #endregion
   }
 }

@@ -7,20 +7,113 @@ using System.Windows;
 namespace ExcelCustomAddin
 {
   /// <summary>
-  /// Service xử lý các chức năng tạo evidence và hyperlink
+  /// EvidenceCreationService - Quản lý việc tạo evidence sheets và hyperlinks
+  ///
+  /// Chức năng chính:
+  /// - Tạo evidence sheets từ các cell được chọn
+  /// - Xử lý merged cells và multiple cell selection
+  /// - Tạo hyperlinks giữa source cells và evidence sheets
+  /// - Định dạng evidence sheets theo cấu hình
+  /// - Quản lý back buttons với named range references
+  /// - Auto-generate sheet names cho cells trống
+  ///
+  /// Xử lý đặc biệt:
+  /// - Merged cells: Chỉ xử lý first cell của merged area
+  /// - Empty cells: Auto-generate names cho sheet "共通" và "テスト項目"
+  /// - Existing sheets: Tạo hyperlink thay vì tạo mới
+  /// - Named ranges: Sử dụng cho back button navigation
+  ///
+  /// Tác giả: lam.pt
+  /// Ngày tạo: 2025
   /// </summary>
   public class EvidenceCreationService
   {
+    #region Fields
+
     private readonly ThisAddIn _addIn;
 
-    public EvidenceCreationService(ThisAddIn addIn)
-    {
-      _addIn = addIn;
-    }
+    #endregion
+
+    #region Constructor
 
     /// <summary>
-    /// Validate inputs for evidence creation
+    /// Khởi tạo EvidenceCreationService
+    ///
     /// </summary>
+    /// <param name="addIn">Instance của ThisAddIn chính</param>
+    public EvidenceCreationService(ThisAddIn addIn)
+    {
+      _addIn = addIn ?? throw new ArgumentNullException(nameof(addIn));
+    }
+
+    #endregion
+
+    #region Public Interface
+
+    /// <summary>
+    /// CreateEvidence - Phương thức chính để tạo evidence sheets
+    ///
+    /// Quy trình:
+    /// 1. Validate inputs (workbook, sheet, selection)
+    /// 2. Xử lý merged cells và multiple selection
+    /// 3. Process từng cell để tạo sheet hoặc hyperlink
+    /// 4. Hiển thị kết quả và cập nhật UI
+    ///
+    /// </summary>
+    public void CreateEvidence()
+    {
+      try
+      {
+        var app = Globals.ThisAddIn.Application;
+        var activeWorkbook = app.ActiveWorkbook;
+        var activeSheet = app.ActiveSheet as Worksheet;
+
+        // Validate inputs
+        Range selectedRange;
+        if (!ValidateEvidenceCreationInputs(activeWorkbook, activeSheet, app, out selectedRange))
+        {
+          return;
+        }
+
+        // Get cells to process (handles both single and multiple cells, merged cells)
+        var cellsToProcess = GetCellsToProcess(selectedRange);
+        bool isMultipleCells = selectedRange.Cells.Count > 1;
+
+        // Process each cell and create evidence sheets
+        var (createdSheets, existingSheets, errorMessages) = ProcessEvidenceCells(
+            cellsToProcess, activeWorkbook, activeSheet);
+
+        // Show results and update UI
+        HandleEvidenceCreationResults(
+            isMultipleCells, createdSheets, existingSheets, errorMessages,
+            activeWorkbook, activeSheet);
+      }
+      catch (Exception ex)
+      {
+        MessageBox.Show($"Có lỗi xảy ra khi tạo sheet bằng chứng: {ex.Message}", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+      }
+    }
+
+    #endregion
+
+    #region Input Validation
+
+    /// <summary>
+    /// Validate inputs cho việc tạo evidence
+    /// Kiểm tra workbook, sheet, selection và protection status
+    ///
+    /// Validation checks:
+    /// - Workbook phải đang mở
+    /// - Sheet phải được chọn
+    /// - Selection phải hợp lệ
+    /// - Sheet không được bảo vệ
+    ///
+    /// </summary>
+    /// <param name="activeWorkbook">Workbook hiện tại</param>
+    /// <param name="activeSheet">Sheet hiện tại</param>
+    /// <param name="app">Excel Application instance</param>
+    /// <param name="selectedRange">Range được chọn (output parameter)</param>
+    /// <returns>true nếu tất cả validation pass, false nếu có lỗi</returns>
     public bool ValidateEvidenceCreationInputs(Workbook activeWorkbook, Worksheet activeSheet, Microsoft.Office.Interop.Excel.Application app, out Range selectedRange)
     {
       selectedRange = null;
@@ -55,9 +148,22 @@ namespace ExcelCustomAddin
       return true;
     }
 
+    #endregion
+
+    #region Cell Processing
+
     /// <summary>
-    /// Get cells to process from selected range (handles merged cells)
+    /// Lấy danh sách cells cần xử lý từ selected range
+    /// Xử lý merged cells để tránh duplicate processing
+    ///
+    /// Logic xử lý:
+    /// - Với multiple cells: Duyệt từng cell, skip merged cells đã xử lý
+    /// - Với single cell: Xử lý merged area nếu có
+    /// - Chỉ lấy first cell của mỗi merged area
+    ///
     /// </summary>
+    /// <param name="selectedRange">Range được chọn từ user</param>
+    /// <returns>Danh sách cells cần xử lý (không duplicate merged cells)</returns>
     public List<Range> GetCellsToProcess(Range selectedRange)
     {
       var cellsToProcess = new List<Range>();
@@ -106,8 +212,14 @@ namespace ExcelCustomAddin
     }
 
     /// <summary>
-    /// Get cell value or generate auto sheet name if empty
+    /// Lấy giá trị cell hoặc generate auto sheet name nếu cell trống
+    /// Chỉ áp dụng auto-generation cho sheet "共通" và "テスト項目"
+    ///
     /// </summary>
+    /// <param name="cell">Cell cần lấy giá trị</param>
+    /// <param name="activeSheet">Sheet chứa cell</param>
+    /// <param name="cellsToProcessCount">Số lượng cells đang xử lý</param>
+    /// <returns>Giá trị cell hoặc auto-generated name</returns>
     public string GetOrGenerateCellValue(Range cell, Worksheet activeSheet, int cellsToProcessCount)
     {
       string cellValue = cell.Value2 != null ? cell.Value2.ToString().Trim() : "";
@@ -129,9 +241,25 @@ namespace ExcelCustomAddin
       return cellValue;
     }
 
+    #endregion
+
+    #region Evidence Processing
+
     /// <summary>
-    /// Process evidence cells and create/link sheets
+    /// Process các evidence cells và tạo/link sheets
+    /// Xử lý từng cell để tạo sheet mới hoặc hyperlink đến sheet đã tồn tại
+    ///
+    /// Quy trình cho mỗi cell:
+    /// 1. Lấy/generate cell value
+    /// 2. Kiểm tra sheet đã tồn tại chưa
+    /// 3. Tạo sheet mới hoặc hyperlink
+    /// 4. Định dạng sheet mới nếu cần
+    ///
     /// </summary>
+    /// <param name="cellsToProcess">Danh sách cells cần xử lý</param>
+    /// <param name="activeWorkbook">Workbook hiện tại</param>
+    /// <param name="activeSheet">Sheet nguồn</param>
+    /// <returns>Tuple chứa danh sách sheets đã tạo, sheets đã tồn tại, và error messages</returns>
     public (List<string> createdSheets, List<string> existingSheets, List<string> errorMessages)
         ProcessEvidenceCells(List<Range> cellsToProcess, Workbook activeWorkbook, Worksheet activeSheet)
     {
@@ -191,9 +319,24 @@ namespace ExcelCustomAddin
       return (createdSheets, existingSheets, errorMessages);
     }
 
+    #endregion
+
+    #region Sheet Formatting
+
     /// <summary>
-    /// Format new evidence sheet with proper settings
+    /// Định dạng evidence sheet mới với các setting từ config
+    /// Áp dụng page setup, margins, fonts, và view settings
+    ///
+    /// Các setting được áp dụng:
+    /// - Print area và page orientation
+    /// - Paper size và margins
+    /// - Zoom/FitToPages (mutually exclusive)
+    /// - Font và column widths
+    /// - View mode và zoom
+    ///
     /// </summary>
+    /// <param name="newSheet">Sheet mới cần định dạng</param>
+    /// <param name="sheetName">Tên sheet (để logging)</param>
     private void FormatNewEvidenceSheet(Worksheet newSheet, string sheetName)
     {
       try
@@ -213,6 +356,8 @@ namespace ExcelCustomAddin
         {
           newSheet.PageSetup.Orientation = Microsoft.Office.Interop.Excel.XlPageOrientation.xlPortrait;
         }
+
+        // Set paper size
         if (config.PaperSize.Equals("A4", StringComparison.OrdinalIgnoreCase))
         {
           newSheet.PageSetup.PaperSize = Microsoft.Office.Interop.Excel.XlPaperSize.xlPaperA4;
@@ -230,6 +375,7 @@ namespace ExcelCustomAddin
           // Default to A4
           newSheet.PageSetup.PaperSize = Microsoft.Office.Interop.Excel.XlPaperSize.xlPaperA4;
         }
+
         // Set zoom or fit to pages (mutually exclusive in Excel)
         if (config.FitToPagesWide || config.FitToPagesTall)
         {
@@ -274,9 +420,19 @@ namespace ExcelCustomAddin
       }
     }
 
+    #endregion
+
+    #region Hyperlink Management
+
     /// <summary>
-    /// Create hyperlink to existing sheet and setup back button with named range reference
+    /// Tạo hyperlink đến existing sheet và setup back button
+    /// Sử dụng named range cho back navigation khi có thể
+    ///
     /// </summary>
+    /// <param name="cell">Cell nguồn để tạo hyperlink</param>
+    /// <param name="sourceSheet">Sheet chứa cell nguồn</param>
+    /// <param name="existingSheet">Sheet đích đã tồn tại</param>
+    /// <param name="sheetName">Tên sheet đích</param>
     public void CreateHyperlinkToExistingSheet(Range cell, Worksheet sourceSheet, Worksheet existingSheet, string sheetName)
     {
       // Tạo hyperlink đến sheet đã tồn tại
@@ -319,8 +475,14 @@ namespace ExcelCustomAddin
     }
 
     /// <summary>
-    /// Create hyperlink to new sheet and setup back button with named range reference
+    /// Tạo hyperlink đến new sheet và setup back button
+    /// Sử dụng named range cho back navigation khi có thể
+    ///
     /// </summary>
+    /// <param name="cell">Cell nguồn để tạo hyperlink</param>
+    /// <param name="sourceSheet">Sheet chứa cell nguồn</param>
+    /// <param name="newSheet">Sheet đích mới tạo</param>
+    /// <param name="sheetName">Tên sheet đích</param>
     public void CreateHyperlinkToNewSheet(Range cell, Worksheet sourceSheet, Worksheet newSheet, string sheetName)
     {
       // Tạo hyperlink đến sheet mới
@@ -353,9 +515,21 @@ namespace ExcelCustomAddin
       backCell.HorizontalAlignment = Microsoft.Office.Interop.Excel.XlHAlign.xlHAlignLeft;
     }
 
+    #endregion
+
+    #region Result Handling
+
     /// <summary>
-    /// Handle evidence creation results (show messages and update UI)
+    /// Xử lý kết quả tạo evidence và hiển thị messages
+    /// Phân biệt xử lý cho single cell vs multiple cells
+    ///
     /// </summary>
+    /// <param name="isMultipleCells">Có phải multiple cells không</param>
+    /// <param name="createdSheets">Danh sách sheets đã tạo</param>
+    /// <param name="existingSheets">Danh sách sheets đã tồn tại</param>
+    /// <param name="errorMessages">Danh sách error messages</param>
+    /// <param name="activeWorkbook">Workbook hiện tại</param>
+    /// <param name="activeSheet">Sheet hiện tại</param>
     public void HandleEvidenceCreationResults(
         bool isMultipleCells,
         List<string> createdSheets,
@@ -375,8 +549,13 @@ namespace ExcelCustomAddin
     }
 
     /// <summary>
-    /// Show results for multiple cells processing
+    /// Hiển thị kết quả cho multiple cells processing
+    /// Hiển thị chi tiết số lượng sheets đã tạo, hyperlink, và errors
+    ///
     /// </summary>
+    /// <param name="createdSheets">Sheets đã tạo mới</param>
+    /// <param name="existingSheets">Sheets đã tồn tại (hyperlink)</param>
+    /// <param name="errorMessages">Error messages</param>
     private void ShowMultipleCellsResults(List<string> createdSheets, List<string> existingSheets, List<string> errorMessages)
     {
       var message = new System.Text.StringBuilder();
@@ -408,8 +587,13 @@ namespace ExcelCustomAddin
     }
 
     /// <summary>
-    /// Show results for single cell processing
+    /// Hiển thị kết quả cho single cell processing
+    /// Chỉ hiển thị error nếu có, thành công thì im lặng
+    ///
     /// </summary>
+    /// <param name="createdSheets">Sheets đã tạo mới</param>
+    /// <param name="existingSheets">Sheets đã tồn tại (hyperlink)</param>
+    /// <param name="errorMessages">Error messages</param>
     private void ShowSingleCellResults(List<string> createdSheets, List<string> existingSheets, List<string> errorMessages)
     {
       if (errorMessages.Count > 0)
@@ -419,41 +603,6 @@ namespace ExcelCustomAddin
       }
     }
 
-    /// <summary>
-    /// CreateEvidence - Main method to create evidence sheets
-    /// </summary>
-    public void CreateEvidence()
-    {
-      try
-      {
-        var app = Globals.ThisAddIn.Application;
-        var activeWorkbook = app.ActiveWorkbook;
-        var activeSheet = app.ActiveSheet as Worksheet;
-
-        // Validate inputs
-        Range selectedRange;
-        if (!ValidateEvidenceCreationInputs(activeWorkbook, activeSheet, app, out selectedRange))
-        {
-          return;
-        }
-
-        // Get cells to process (handles both single and multiple cells, merged cells)
-        var cellsToProcess = GetCellsToProcess(selectedRange);
-        bool isMultipleCells = selectedRange.Cells.Count > 1;
-
-        // Process each cell and create evidence sheets
-        var (createdSheets, existingSheets, errorMessages) = ProcessEvidenceCells(
-            cellsToProcess, activeWorkbook, activeSheet);
-
-        // Show results and update UI
-        HandleEvidenceCreationResults(
-            isMultipleCells, createdSheets, existingSheets, errorMessages,
-            activeWorkbook, activeSheet);
-      }
-      catch (Exception ex)
-      {
-        MessageBox.Show($"Có lỗi xảy ra khi tạo sheet bằng chứng: {ex.Message}", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
-      }
-    }
+    #endregion
   }
 }

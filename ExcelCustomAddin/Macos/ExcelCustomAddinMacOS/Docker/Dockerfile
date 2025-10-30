@@ -6,7 +6,7 @@ ARG BUILD_DATE
 ARG VCS_REF
 ARG VERSION=1.0.0
 
-LABEL maintainer="Excel Custom Add-in Team" \
+LABEL maintainer="lam.pt" \
       org.opencontainers.image.title="Excel Custom Add-in" \
       org.opencontainers.image.description="Advanced worksheet management and image tools for Excel workbooks" \
       org.opencontainers.image.version=${VERSION} \
@@ -14,7 +14,7 @@ LABEL maintainer="Excel Custom Add-in Team" \
       org.opencontainers.image.revision=${VCS_REF} \
       org.opencontainers.image.url="https://github.com/ken863/ExcelCustomAddin" \
       org.opencontainers.image.source="https://github.com/ken863/ExcelCustomAddin" \
-      org.opencontainers.image.vendor="Excel Custom Add-in Team" \
+      org.opencontainers.image.vendor="lam.pt" \
       org.opencontainers.image.licenses="MIT"
 
 # Thiết lập proxy arguments

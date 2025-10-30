@@ -8,106 +8,61 @@ using System.Windows;
 namespace ExcelCustomAddin
 {
   /// <summary>
-  /// Service xử lý các chức năng liên quan đến hình ảnh
+  /// ImageProcessingService - Quản lý xử lý hình ảnh trong Excel
+  ///
+  /// Chức năng chính:
+  /// - Format và style hình ảnh (shadow, no fill, no line)
+  /// - Auto-scale hình ảnh theo print area width
+  /// - Chèn nhiều hình ảnh từ thư mục với page breaks
+  /// - Tính toán vị trí và điều chỉnh print area
+  /// - Xóa file sau khi chèn thành công
+  ///
+  /// Tính năng đặc biệt:
+  /// - Auto-fix width: Tự động scale theo print area
+  /// - Page break insertion: Tự động chèn page breaks khi cần
+  /// - Position calculation: Tính toán vị trí thông minh
+  /// - Print area adjustment: Tự động mở rộng print area
+  ///
+  /// Tác giả: lam.pt
+  /// Ngày tạo: 2025
   /// </summary>
   public class ImageProcessingService
   {
+    #region Fields
+
     private readonly ThisAddIn _addIn;
 
-    // Column used as the page-break / right-most printed column for Evidence sheets
+    // Configuration constants from SheetConfigManager
     private static string PAGE_BREAK_COLUMN_NAME => SheetConfigManager.GetGeneralConfig().PageBreakColumnName;
-    // Last row index for print area in Evidence sheets
     private static int PRINT_AREA_LAST_ROW_IDX => SheetConfigManager.GetGeneralConfig().PrintAreaLastRowIdx;
 
+    #endregion
+
+    #region Constructor
+
+    /// <summary>
+    /// Khởi tạo ImageProcessingService
+    ///
+    /// </summary>
+    /// <param name="addIn">Instance của ThisAddIn chính</param>
     public ImageProcessingService(ThisAddIn addIn)
     {
-      _addIn = addIn;
+      _addIn = addIn ?? throw new ArgumentNullException(nameof(addIn));
     }
 
-    /// <summary>
-    /// Apply picture style to shape: no fill, no line, shadow, no reflection, no glow
-    /// </summary>
-    /// <param name="shape">The shape to apply style to</param>
-    public void ApplyPictureStyleToShape(Microsoft.Office.Interop.Excel.Shape shape)
-    {
-      shape.Fill.Visible = Microsoft.Office.Core.MsoTriState.msoFalse;
-      shape.Line.Visible = Microsoft.Office.Core.MsoTriState.msoFalse;
-      shape.Shadow.Style = Microsoft.Office.Core.MsoShadowStyle.msoShadowStyleOuterShadow;
-      shape.Shadow.Type = Microsoft.Office.Core.MsoShadowType.msoShadow21;
-      shape.Shadow.ForeColor.RGB = 0; // Black
-      shape.Shadow.Transparency = 0.3f;
-      shape.Shadow.Size = 100;
-      shape.Shadow.Blur = 15;
-      shape.Shadow.OffsetX = 0;
-      shape.Shadow.OffsetY = 0;
-      shape.Reflection.Type = Microsoft.Office.Core.MsoReflectionType.msoReflectionTypeNone;
-      shape.Glow.Radius = 0;
-      shape.SoftEdge.Radius = 0;
-    }
+    #endregion
 
-    /// <summary>
-    /// Tính toán tỷ lệ scale tự động dựa trên print area
-    /// </summary>
-    /// <param name="worksheet">Worksheet chứa hình ảnh</param>
-    /// <param name="imageWidth">Chiều rộng gốc của hình ảnh</param>
-    /// <returns>Tỷ lệ scale (0.0 - 1.0)</returns>
-    public double CalculateAutoScaleRate(Worksheet worksheet, double imageWidth)
-    {
-      try
-      {
-        // Lấy chiều rộng của print area (từ cột A đến PAGE_BREAK_COLUMN_NAME)
-        int startColumn = UtilityService.GetColumnIndex("A");
-        int endColumn = UtilityService.GetColumnIndex(PAGE_BREAK_COLUMN_NAME);
-
-        double printAreaWidth = 0;
-        for (int col = startColumn; col <= endColumn; col++)
-        {
-          Range columnRange = worksheet.Cells[1, col];
-          printAreaWidth += (double)columnRange.Width;
-        }
-
-        // Trừ đi chiều rộng của 2 cột (margin trái và phải)
-        double availableWidth = printAreaWidth - (2 * (double)worksheet.Cells[1, 1].Width);
-
-        // Tính tỷ lệ scale
-        double scaleRate = availableWidth / imageWidth;
-
-        // Giới hạn tỷ lệ trong khoảng hợp lý (10% - 100%)
-        scaleRate = Math.Max(0.1, Math.Min(1.0, scaleRate));
-
-        Logger.Debug($"Auto scale calculation: PrintAreaWidth={printAreaWidth:F1}, AvailableWidth={availableWidth:F1}, ImageWidth={imageWidth:F1}, ScaleRate={scaleRate:F3}");
-
-        return scaleRate;
-      }
-      catch (Exception ex)
-      {
-        Logger.Warning($"Error calculating auto scale rate: {ex.Message}, using default 1.0");
-        return 1.0;
-      }
-    }
-
-    /// <summary>
-    /// Lấy tỷ lệ scale dựa trên cài đặt auto fix width
-    /// </summary>
-    /// <param name="worksheet">Worksheet hiện tại</param>
-    /// <param name="imageWidth">Chiều rộng gốc của hình ảnh (đối với auto scale)</param>
-    /// <returns>Tỷ lệ scale</returns>
-    public double GetScaleRate(Worksheet worksheet, double imageWidth = 0)
-    {
-      if (_addIn._actionPanel.cbAutoFixWidth.Checked)
-      {
-        // Tự động tính toán tỷ lệ dựa trên print area
-        return CalculateAutoScaleRate(worksheet, imageWidth);
-      }
-      else
-      {
-        // Sử dụng tỷ lệ từ numScalePercent
-        return (double)_addIn._actionPanel.numScalePercent.Value / 100.0;
-      }
-    }
+    #region Public Interface
 
     /// <summary>
     /// FormatImages - Xử lý format hình ảnh đã chọn
+    /// Áp dụng auto-scaling và picture styling cho selected shapes
+    ///
+    /// Quy trình:
+    /// 1. Validate selection có phải là shapes
+    /// 2. Tính toán scale rate (auto hoặc manual)
+    /// 3. Áp dụng scaling và picture style cho từng shape
+    ///
     /// </summary>
     public void FormatImages()
     {
@@ -170,102 +125,16 @@ namespace ExcelCustomAddin
     }
 
     /// <summary>
-    /// Tính toán vị trí ban đầu để chèn hình ảnh
-    /// </summary>
-    public (double Top, double Left) CalculateInitialImagePosition(Worksheet activeSheet, Range activeCell, bool insertOnNewPage)
-    {
-      // Luôn chèn hình ảnh đầu tiên tại chính cell đang chọn
-      double topLocation = (double)activeCell.Top;
-      double leftLocation = (double)activeCell.Left;
-
-      Logger.Debug($"Insert first image at cell {activeCell.Address[false, false]} (Row: {activeCell.Row}, Column: {activeCell.Column})");
-
-      return (topLocation, leftLocation);
-    }
-
-    /// <summary>
-    /// Thêm page break cho hình ảnh tiếp theo nếu cần thiết
-    /// </summary>
-    public void AddPageBreakForNextImage(Worksheet activeSheet, Range activeCell, ref (double Top, double Left) position, ref double currentPageStartTop, double maxBottomPosition, int imageIndex, double nextImageHeight)
-    {
-      try
-      {
-        // Tính toán chiều cao của trang hiện tại
-        double pageHeight = activeCell.Height * PRINT_AREA_LAST_ROW_IDX;
-
-        // Tính toán chiều cao đã sử dụng trên trang hiện tại
-        double usedHeightOnCurrentPage = maxBottomPosition - currentPageStartTop;
-
-        // Tính toán chiều cao sẽ sử dụng nếu chèn hình tiếp theo (bao gồm khoảng cách giữa các hình)
-        double nextImageHeightWithSpacing = nextImageHeight + activeCell.Height;
-
-        // Kiểm tra xem có cần tạo page break không
-        // Tạo page break nếu: chiều cao đã dùng + chiều cao hình tiếp theo > chiều cao trang hiện tại
-        if (usedHeightOnCurrentPage + nextImageHeightWithSpacing > pageHeight)
-        {
-          // Chèn horizontal page break
-          int rowForPageBreak = Math.Max(1, (int)Math.Ceiling(maxBottomPosition / activeCell.Height) + 2);
-          Range breakRange = activeSheet.Cells[rowForPageBreak, 1];
-          activeSheet.HPageBreaks.Add(breakRange);
-
-          // Cập nhật vị trí cho ảnh mới tại row 2 của trang mới (cùng cột với cell ban đầu)
-          Range row2Cell = activeSheet.Cells[rowForPageBreak + 1, activeCell.Column];
-          position.Top = (double)row2Cell.Top;
-          position.Left = (double)row2Cell.Left;
-
-          // Cập nhật vị trí bắt đầu của trang mới
-          currentPageStartTop = position.Top;
-
-          Logger.Debug($"Added page break at row {rowForPageBreak}, image {imageIndex} will be placed at row {rowForPageBreak + 1} (row 2 of new page). Used height: {usedHeightOnCurrentPage:F1}, Next image height: {nextImageHeight:F1}, Total would be: {usedHeightOnCurrentPage + nextImageHeightWithSpacing:F1}, Page height: {pageHeight:F1}");
-        }
-        else
-        {
-          Logger.Debug($"No page break needed for image {imageIndex}. Used height: {usedHeightOnCurrentPage:F1}, Next image height: {nextImageHeight:F1}, Total: {usedHeightOnCurrentPage + nextImageHeightWithSpacing:F1} / Page height: {pageHeight:F1}. Images will fit on current page.");
-        }
-      }
-      catch (Exception pageBreakEx)
-      {
-        Logger.Warning($"Failed to add page break: {pageBreakEx.Message}");
-        // Tiếp tục chèn ảnh mà không có page break
-      }
-    }
-
-    /// <summary>
-    /// Cập nhật vị trí cho hình ảnh tiếp theo
-    /// </summary>
-    public void UpdatePositionForNextImage(Worksheet activeSheet, Range activeCell, ref (double Top, double Left) position, Microsoft.Office.Interop.Excel.Shape shape, bool insertOnNewPage)
-    {
-      // Luôn cập nhật vị trí cho hình ảnh tiếp theo (xếp theo chiều dọc)
-      // Page break sẽ được xử lý riêng trong AddPageBreakForNextImage
-      position.Top += shape.Height + activeCell.Height;
-
-      Logger.Debug($"Updated position for next image: Top={position.Top:F1}, Left={position.Left:F1}");
-    }
-
-    /// <summary>
-    /// Điều chỉnh print area sau khi chèn hình ảnh
-    /// </summary>
-    public void AdjustPrintAreaForImages(Worksheet activeSheet, Range activeCell, double maxBottomPosition)
-    {
-      try
-      {
-        // Tính toán row cuối cùng cần thiết cho print area
-        int lastRow = Math.Max(PRINT_AREA_LAST_ROW_IDX, (int)Math.Ceiling(maxBottomPosition / activeCell.Height) + 2);
-
-        // Cập nhật print area
-        string printArea = $"'{activeSheet.Name}'!$A$1:${PAGE_BREAK_COLUMN_NAME}${lastRow}";
-        activeSheet.PageSetup.PrintArea = printArea;
-
-        Logger.Debug($"Adjusted print area to: {printArea}");
-      }
-      catch (Exception ex)
-      {
-        Logger.Warning($"Failed to adjust print area: {ex.Message}");
-      }
-    }
-
-    /// <summary>
-    /// Xử lý sự kiện chèn nhiều hình ảnh
+    /// InsertMultipleImages - Chèn nhiều hình ảnh từ thư mục
+    /// Hỗ trợ auto-scaling, page breaks, và position calculation
+    ///
+    /// Quy trình:
+    /// 1. Validate workbook, sheet, và cell selection
+    /// 2. Scan thư mục cho image files
+    /// 3. Tính toán vị trí và page breaks
+    /// 4. Chèn từng hình với scaling và styling
+    /// 5. Điều chỉnh print area và cleanup files
+    ///
     /// </summary>
     public void InsertMultipleImages()
     {
@@ -435,5 +304,249 @@ namespace ExcelCustomAddin
         MessageBox.Show($"Có lỗi xảy ra khi chèn hình ảnh: {ex.Message}", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
       }
     }
+
+    #endregion
+
+    #region Picture Styling
+
+    /// <summary>
+    /// Apply picture style to shape: no fill, no line, shadow, no reflection, no glow
+    /// Tạo hiệu ứng shadow đen với transparency và blur
+    ///
+    /// </summary>
+    /// <param name="shape">Shape cần áp dụng style</param>
+    public void ApplyPictureStyleToShape(Microsoft.Office.Interop.Excel.Shape shape)
+    {
+      shape.Fill.Visible = Microsoft.Office.Core.MsoTriState.msoFalse;
+      shape.Line.Visible = Microsoft.Office.Core.MsoTriState.msoFalse;
+      shape.Shadow.Style = Microsoft.Office.Core.MsoShadowStyle.msoShadowStyleOuterShadow;
+      shape.Shadow.Type = Microsoft.Office.Core.MsoShadowType.msoShadow21;
+      shape.Shadow.ForeColor.RGB = 0; // Black
+      shape.Shadow.Transparency = 0.3f;
+      shape.Shadow.Size = 100;
+      shape.Shadow.Blur = 15;
+      shape.Shadow.OffsetX = 0;
+      shape.Shadow.OffsetY = 0;
+      shape.Reflection.Type = Microsoft.Office.Core.MsoReflectionType.msoReflectionTypeNone;
+      shape.Glow.Radius = 0;
+      shape.SoftEdge.Radius = 0;
+    }
+
+    #endregion
+
+    #region Auto-Scaling
+
+    /// <summary>
+    /// Tính toán tỷ lệ scale tự động dựa trên print area
+    /// Scale hình ảnh để fit trong available width của print area
+    ///
+    /// Công thức:
+    /// - Print area width = sum từ column A đến PAGE_BREAK_COLUMN
+    /// - Available width = print area - 2 column margins
+    /// - Scale rate = available width / image width
+    /// - Giới hạn: 10% - 100%
+    ///
+    /// </summary>
+    /// <param name="worksheet">Worksheet chứa hình ảnh</param>
+    /// <param name="imageWidth">Chiều rộng gốc của hình ảnh</param>
+    /// <returns>Tỷ lệ scale (0.1 - 1.0)</returns>
+    public double CalculateAutoScaleRate(Worksheet worksheet, double imageWidth)
+    {
+      try
+      {
+        // Lấy chiều rộng của print area (từ cột A đến PAGE_BREAK_COLUMN_NAME)
+        int startColumn = UtilityService.GetColumnIndex("A");
+        int endColumn = UtilityService.GetColumnIndex(PAGE_BREAK_COLUMN_NAME);
+
+        double printAreaWidth = 0;
+        for (int col = startColumn; col <= endColumn; col++)
+        {
+          Range columnRange = worksheet.Cells[1, col];
+          printAreaWidth += (double)columnRange.Width;
+        }
+
+        // Trừ đi chiều rộng của 2 cột (margin trái và phải)
+        double availableWidth = printAreaWidth - (2 * (double)worksheet.Cells[1, 1].Width);
+
+        // Tính tỷ lệ scale
+        double scaleRate = availableWidth / imageWidth;
+
+        // Giới hạn tỷ lệ trong khoảng hợp lý (10% - 100%)
+        scaleRate = Math.Max(0.1, Math.Min(1.0, scaleRate));
+
+        Logger.Debug($"Auto scale calculation: PrintAreaWidth={printAreaWidth:F1}, AvailableWidth={availableWidth:F1}, ImageWidth={imageWidth:F1}, ScaleRate={scaleRate:F3}");
+
+        return scaleRate;
+      }
+      catch (Exception ex)
+      {
+        Logger.Warning($"Error calculating auto scale rate: {ex.Message}, using default 1.0");
+        return 1.0;
+      }
+    }
+
+    /// <summary>
+    /// Lấy tỷ lệ scale dựa trên cài đặt auto fix width
+    /// Chọn giữa auto-calculation hoặc manual percentage
+    ///
+    /// </summary>
+    /// <param name="worksheet">Worksheet hiện tại</param>
+    /// <param name="imageWidth">Chiều rộng gốc của hình ảnh (đối với auto scale)</param>
+    /// <returns>Tỷ lệ scale</returns>
+    public double GetScaleRate(Worksheet worksheet, double imageWidth = 0)
+    {
+      if (_addIn._actionPanel.cbAutoFixWidth.Checked)
+      {
+        // Tự động tính toán tỷ lệ dựa trên print area
+        return CalculateAutoScaleRate(worksheet, imageWidth);
+      }
+      else
+      {
+        // Sử dụng tỷ lệ từ numScalePercent
+        return (double)_addIn._actionPanel.numScalePercent.Value / 100.0;
+      }
+    }
+
+    #endregion
+
+    #region Position Calculation
+
+    /// <summary>
+    /// Tính toán vị trí ban đầu để chèn hình ảnh
+    /// Luôn chèn hình đầu tiên tại cell đang chọn
+    ///
+    /// </summary>
+    /// <param name="activeSheet">Sheet hiện tại</param>
+    /// <param name="activeCell">Cell đang chọn</param>
+    /// <param name="insertOnNewPage">Có chèn trên new page không (không ảnh hưởng vị trí đầu)</param>
+    /// <returns>Tuple (Top, Left) position</returns>
+    public (double Top, double Left) CalculateInitialImagePosition(Worksheet activeSheet, Range activeCell, bool insertOnNewPage)
+    {
+      // Luôn chèn hình ảnh đầu tiên tại chính cell đang chọn
+      double topLocation = (double)activeCell.Top;
+      double leftLocation = (double)activeCell.Left;
+
+      Logger.Debug($"Insert first image at cell {activeCell.Address[false, false]} (Row: {activeCell.Row}, Column: {activeCell.Column})");
+
+      return (topLocation, leftLocation);
+    }
+
+    /// <summary>
+    /// Cập nhật vị trí cho hình ảnh tiếp theo
+    /// Xếp hình theo chiều dọc, page breaks xử lý riêng
+    ///
+    /// </summary>
+    /// <param name="activeSheet">Sheet hiện tại</param>
+    /// <param name="activeCell">Cell gốc</param>
+    /// <param name="position">Vị trí hiện tại (ref parameter)</param>
+    /// <param name="shape">Shape vừa chèn</param>
+    /// <param name="insertOnNewPage">Chế độ insert on new page</param>
+    public void UpdatePositionForNextImage(Worksheet activeSheet, Range activeCell, ref (double Top, double Left) position, Microsoft.Office.Interop.Excel.Shape shape, bool insertOnNewPage)
+    {
+      // Luôn cập nhật vị trí cho hình ảnh tiếp theo (xếp theo chiều dọc)
+      // Page break sẽ được xử lý riêng trong AddPageBreakForNextImage
+      position.Top += shape.Height + activeCell.Height;
+
+      Logger.Debug($"Updated position for next image: Top={position.Top:F1}, Left={position.Left:F1}");
+    }
+
+    #endregion
+
+    #region Page Break Management
+
+    /// <summary>
+    /// Thêm page break cho hình ảnh tiếp theo nếu cần thiết
+    /// Tính toán dựa trên used height và next image height
+    ///
+    /// Logic:
+    /// - Tính used height trên current page
+    /// - Dự đoán total height nếu add next image
+    /// - Add page break nếu vượt page height
+    /// - Update position cho new page
+    ///
+    /// </summary>
+    /// <param name="activeSheet">Sheet hiện tại</param>
+    /// <param name="activeCell">Cell gốc</param>
+    /// <param name="position">Vị trí hiện tại (ref parameter)</param>
+    /// <param name="currentPageStartTop">Vị trí bắt đầu trang hiện tại (ref parameter)</param>
+    /// <param name="maxBottomPosition">Vị trí thấp nhất hiện tại</param>
+    /// <param name="imageIndex">Index của hình sắp chèn</param>
+    /// <param name="nextImageHeight">Chiều cao của hình sắp chèn</param>
+    public void AddPageBreakForNextImage(Worksheet activeSheet, Range activeCell, ref (double Top, double Left) position, ref double currentPageStartTop, double maxBottomPosition, int imageIndex, double nextImageHeight)
+    {
+      try
+      {
+        // Tính toán chiều cao của trang hiện tại
+        double pageHeight = activeCell.Height * PRINT_AREA_LAST_ROW_IDX;
+
+        // Tính toán chiều cao đã sử dụng trên trang hiện tại
+        double usedHeightOnCurrentPage = maxBottomPosition - currentPageStartTop;
+
+        // Tính toán chiều cao sẽ sử dụng nếu chèn hình tiếp theo (bao gồm khoảng cách giữa các hình)
+        double nextImageHeightWithSpacing = nextImageHeight + activeCell.Height;
+
+        // Kiểm tra xem có cần tạo page break không
+        // Tạo page break nếu: chiều cao đã dùng + chiều cao hình tiếp theo > chiều cao trang hiện tại
+        if (usedHeightOnCurrentPage + nextImageHeightWithSpacing > pageHeight)
+        {
+          // Chèn horizontal page break
+          int rowForPageBreak = Math.Max(1, (int)Math.Ceiling(maxBottomPosition / activeCell.Height) + 2);
+          Range breakRange = activeSheet.Cells[rowForPageBreak, 1];
+          activeSheet.HPageBreaks.Add(breakRange);
+
+          // Cập nhật vị trí cho ảnh mới tại row 2 của trang mới (cùng cột với cell ban đầu)
+          Range row2Cell = activeSheet.Cells[rowForPageBreak + 1, activeCell.Column];
+          position.Top = (double)row2Cell.Top;
+          position.Left = (double)row2Cell.Left;
+
+          // Cập nhật vị trí bắt đầu của trang mới
+          currentPageStartTop = position.Top;
+
+          Logger.Debug($"Added page break at row {rowForPageBreak}, image {imageIndex} will be placed at row {rowForPageBreak + 1} (row 2 of new page). Used height: {usedHeightOnCurrentPage:F1}, Next image height: {nextImageHeight:F1}, Total would be: {usedHeightOnCurrentPage + nextImageHeightWithSpacing:F1}, Page height: {pageHeight:F1}");
+        }
+        else
+        {
+          Logger.Debug($"No page break needed for image {imageIndex}. Used height: {usedHeightOnCurrentPage:F1}, Next image height: {nextImageHeight:F1}, Total: {usedHeightOnCurrentPage + nextImageHeightWithSpacing:F1} / Page height: {pageHeight:F1}. Images will fit on current page.");
+        }
+      }
+      catch (Exception pageBreakEx)
+      {
+        Logger.Warning($"Failed to add page break: {pageBreakEx.Message}");
+        // Tiếp tục chèn ảnh mà không có page break
+      }
+    }
+
+    #endregion
+
+    #region Print Area Adjustment
+
+    /// <summary>
+    /// Điều chỉnh print area sau khi chèn hình ảnh
+    /// Mở rộng print area để bao phủ tất cả hình ảnh đã chèn
+    ///
+    /// </summary>
+    /// <param name="activeSheet">Sheet cần điều chỉnh</param>
+    /// <param name="activeCell">Cell gốc</param>
+    /// <param name="maxBottomPosition">Vị trí thấp nhất của hình ảnh</param>
+    public void AdjustPrintAreaForImages(Worksheet activeSheet, Range activeCell, double maxBottomPosition)
+    {
+      try
+      {
+        // Tính toán row cuối cùng cần thiết cho print area
+        int lastRow = Math.Max(PRINT_AREA_LAST_ROW_IDX, (int)Math.Ceiling(maxBottomPosition / activeCell.Height) + 2);
+
+        // Cập nhật print area
+        string printArea = $"'{activeSheet.Name}'!$A$1:${PAGE_BREAK_COLUMN_NAME}${lastRow}";
+        activeSheet.PageSetup.PrintArea = printArea;
+
+        Logger.Debug($"Adjusted print area to: {printArea}");
+      }
+      catch (Exception ex)
+      {
+        Logger.Warning($"Failed to adjust print area: {ex.Message}");
+      }
+    }
+
+    #endregion
   }
 }
