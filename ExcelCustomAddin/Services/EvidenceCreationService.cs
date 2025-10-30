@@ -563,13 +563,6 @@ namespace ExcelCustomAddin
     {
       var message = new System.Text.StringBuilder();
 
-      if (createdSheets.Count > 0)
-      {
-        message.AppendLine($"Đã tạo {createdSheets.Count} sheet mới:");
-        foreach (var sheet in createdSheets)
-          message.AppendLine($"  - {sheet}");
-      }
-
       if (existingSheets.Count > 0)
       {
         message.AppendLine($"Đã tạo hyperlink đến {existingSheets.Count} sheet đã tồn tại:");
