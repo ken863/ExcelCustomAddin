@@ -125,7 +125,7 @@ namespace ExcelCustomAddin
             {
                 if (listofSheet?.SelectedItems != null && listofSheet.SelectedItems.Count > 0)
                 {
-                    var selectedItem = listofSheet.SelectedItems[0].Tag as ThisAddIn.SheetInfo;
+                    var selectedItem = listofSheet.SelectedItems[0].Tag as SheetInfo;
                     if (selectedItem != null)
                     {
                         // Cập nhật text của menu item dựa trên trạng thái pin
@@ -228,7 +228,7 @@ namespace ExcelCustomAddin
             {
                 if (listofSheet?.SelectedItems != null && listofSheet.SelectedItems.Count > 0)
                 {
-                    var selectedItem = listofSheet.SelectedItems[0].Tag as ThisAddIn.SheetInfo;
+                    var selectedItem = listofSheet.SelectedItems[0].Tag as SheetInfo;
                     if (selectedItem != null && this.PinSheetEvent != null)
                     {
                         var args = new PinSheetEventArgs
@@ -253,7 +253,7 @@ namespace ExcelCustomAddin
         /// </summary>
         /// <param name="sheets"></param>
         /// <param name="selectedSheetName"></param>
-        public void BindSheetList(System.Collections.Generic.List<ThisAddIn.SheetInfo> sheets, string selectedSheetName = null)
+        public void BindSheetList(System.Collections.Generic.List<SheetInfo> sheets, string selectedSheetName = null)
         {
             try
             {

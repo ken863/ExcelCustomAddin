@@ -280,6 +280,9 @@
     <Compile Include="ActionPanelControl.Designer.cs">
       <DependentUpon>ActionPanelControl.cs</DependentUpon>
     </Compile>
+    <Compile Include="ApplicationLifecycleService.cs" />
+    <Compile Include="EvidenceCreationService.cs" />
+    <Compile Include="ImageProcessingService.cs" />
     <Compile Include="ManageTaskPaneRibbon.cs">
       <SubType>Component</SubType>
     </Compile>
@@ -289,6 +292,9 @@
     <Compile Include="Properties\AssemblyInfo.cs">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="SheetInfo.cs" />
+    <Compile Include="SheetManagementService.cs" />
+    <Compile Include="UtilityService.cs" />
     <EmbeddedResource Include="ActionPanelControl.resx">
       <DependentUpon>ActionPanelControl.cs</DependentUpon>
     </EmbeddedResource>
