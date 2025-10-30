@@ -2,10 +2,8 @@ using Microsoft.Office.Interop.Excel;
 using Microsoft.Office.Tools;
 using System;
 using System.IO;
-using System.Linq;
 using System.Runtime.InteropServices;
 using System.Windows.Threading;
-using System.Xml.Linq;
 
 namespace ExcelCustomAddin
 {
@@ -164,39 +162,93 @@ namespace ExcelCustomAddin
     }
 
     /// <summary>
-    /// Load và áp dụng theme/template cho workbook mới
-    /// Hỗ trợ đa phiên bản Office và kiến trúc hệ thống
-    ///
+    /// Load và áp dụng các template từ các đường dẫn được chỉ định, hỗ trợ các phiên bản khác nhau của Office
     /// </summary>
     /// <param name="wb">Workbook cần áp dụng theme</param>
     public void LoadTemplate(Workbook wb)
     {
-      if (wb == null) return;
-
       try
       {
-        Logger.Debug($"Loading Office themes for workbook: {wb.Name}");
-
-        // Lấy và áp dụng các theme files
-        foreach (var themePath in GetThemePaths())
+        // Lấy phiên bản Office hiện tại
+        var app = Globals.ThisAddIn.Application;
+        if (app == null)
         {
-          if (File.Exists(themePath))
+          Logger.Error("Không thể truy cập ứng dụng Office.");
+          return;
+        }
+
+        string officeVersion = app.Version;
+        string officeBasePath = "";
+        bool foundPath = false;
+
+        // Lấy các đường dẫn Program Files (cả x64 và x86)
+        var programFilesPaths = new[]
+        {
+          Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),      // Program Files (x64)
+          Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86)    // Program Files (x86)
+        };
+
+        // Xác định đường dẫn cơ sở dựa trên phiên bản Office và kiểm tra cả x64/x86
+        foreach (var programFiles in programFilesPaths)
+        {
+          if (string.IsNullOrEmpty(programFiles)) continue;
+
+          switch (officeVersion)
           {
-            Logger.Debug($"Applying theme from: {themePath}");
-            ApplyThemeToWorkbook(wb, themePath);
-            Logger.Info($"✓ Successfully applied theme: {Path.GetFileName(themePath)}");
+            case "15.0": // Office 2013
+              officeBasePath = System.IO.Path.Combine(programFiles, "Microsoft Office", "Office15", "Document Themes 15");
+              break;
+            case "16.0": // Office 2016, Office 365
+              officeBasePath = System.IO.Path.Combine(programFiles, "Microsoft Office", "root", "Document Themes 16");
+              break;
+            default:
+              Logger.Error($"Phiên bản Office không được hỗ trợ: {officeVersion}");
+              return;
           }
-          else
+
+          if (System.IO.Directory.Exists(officeBasePath))
           {
-            Logger.Debug($"Theme file not found: {themePath}");
+            foundPath = true;
+            Logger.Debug($"Tìm thấy thư mục Document Themes tại: {officeBasePath}");
+            break;
           }
         }
 
-        Logger.Debug($"Theme loading completed for workbook: {wb.Name}");
+        if (!foundPath)
+        {
+          Logger.Error("Không tìm thấy thư mục Document Themes. Vui lòng kiểm tra cài đặt Office.");
+          return;
+        }
+
+        string themeColorsPath = System.IO.Path.Combine(officeBasePath, "Theme Colors", "Office 2007 - 2010.xml");
+        string themeFontsPath = System.IO.Path.Combine(officeBasePath, "Theme Fonts", "Office 2007 - 2010.xml");
+
+        // Kiểm tra sự tồn tại của các tệp
+        if (!System.IO.File.Exists(themeColorsPath))
+        {
+          Logger.Error($"Không tìm thấy tệp Theme Colors tại: {themeColorsPath}");
+          return;
+        }
+
+        if (!System.IO.File.Exists(themeFontsPath))
+        {
+          Logger.Error($"Không tìm thấy tệp Theme Fonts tại: {themeFontsPath}");
+          return;
+        }
+
+        Logger.Info("Bắt đầu áp dụng các template...");
+
+        // Áp dụng Theme Colors
+        wb.Theme.ThemeColorScheme.Load(themeColorsPath);
+        Logger.Info($"Đã áp dụng Theme Colors từ: {themeColorsPath}");
+
+        // Áp dụng Theme Fonts
+        wb.Theme.ThemeFontScheme.Load(themeFontsPath);
+        Logger.Info($"Đã áp dụng Theme Fonts từ: {themeFontsPath}");
       }
       catch (Exception ex)
       {
-        Logger.Error($"Error loading themes for workbook {wb.Name}: {ex.Message}", ex);
+        Logger.Error($"Có lỗi xảy ra khi áp dụng template: {ex.Message}", ex);
       }
     }
 
@@ -248,193 +300,6 @@ namespace ExcelCustomAddin
       {
         // Fallback: kiểm tra process
         return Environment.Is64BitProcess;
-      }
-    }
-
-    #endregion
-
-    #region Office Path Resolution
-
-    /// <summary>
-    /// Lấy danh sách các đường dẫn Office theme có thể có
-    /// Tự động phát hiện dựa trên phiên bản Office và kiến trúc hệ thống
-    ///
-    /// Ưu tiên:
-    /// 1. Office 2016/365 (16.0) - "root\\Document Themes 16"
-    /// 2. Office 2013 (15.0) - "Office15\\Document Themes 15"
-    /// 3. Cả x64 và x86 paths
-    ///
-    /// </summary>
-    /// <param name="officeVersion">Phiên bản Office (VD: "16.0")</param>
-    /// <returns>Mảng các đường dẫn có thể có theme files</returns>
-    private string[] GetPossibleOfficePaths(string officeVersion)
-    {
-      string themeFolder = "";
-      switch (officeVersion)
-      {
-        case "15.0": // Office 2013
-          themeFolder = "Document Themes 15";
-          break;
-        case "16.0": // Office 2016, Office 365
-          themeFolder = "Document Themes 16";
-          break;
-        default:
-          Logger.Warning($"Unsupported Office version for theme detection: {officeVersion}");
-          return new string[0];
-      }
-
-      // Lấy các đường dẫn Program Files (cả x64 và x86)
-      var programFilesPaths = new[]
-      {
-        Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),      // Program Files (x64)
-        Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86)    // Program Files (x86)
-      };
-
-      var possiblePaths = new System.Collections.Generic.List<string>();
-
-      foreach (var programFiles in programFilesPaths)
-      {
-        if (!string.IsNullOrEmpty(programFiles))
-        {
-          // Office 2013: Office15\Document Themes 15
-          if (officeVersion == "15.0")
-          {
-            possiblePaths.Add(Path.Combine(programFiles, "Microsoft Office", "Office15", themeFolder));
-          }
-          // Office 2016+: root\Document Themes 16
-          else if (officeVersion == "16.0")
-          {
-            possiblePaths.Add(Path.Combine(programFiles, "Microsoft Office", "root", themeFolder));
-          }
-        }
-      }
-
-      Logger.Debug($"Generated {possiblePaths.Count} possible Office theme paths for version {officeVersion}");
-      return possiblePaths.ToArray();
-    }
-
-    #endregion
-
-    #region Theme Management
-
-    /// <summary>
-    /// Lấy danh sách đường dẫn theme files từ các vị trí có thể có
-    /// Kết hợp phát hiện đường dẫn Office với danh sách theme cụ thể
-    ///
-    /// Theme files được tìm:
-    /// - Theme Colors\\Office 2007 - 2010.xml
-    /// - Theme Fonts\\Office 2007 - 2010.xml
-    ///
-    /// </summary>
-    /// <returns>Danh sách đường dẫn theme files</returns>
-    private System.Collections.Generic.List<string> GetThemePaths()
-    {
-      var themePaths = new System.Collections.Generic.List<string>();
-
-      try
-      {
-        // Lấy phiên bản Office hiện tại
-        string officeVersion = Globals.ThisAddIn.Application.Version;
-        string[] possiblePaths = GetPossibleOfficePaths(officeVersion);
-
-        // Thử từng đường dẫn Office
-        foreach (var basePath in possiblePaths)
-        {
-          if (Directory.Exists(basePath))
-          {
-            // Thêm các theme files cụ thể
-            var themeFiles = new[]
-            {
-              Path.Combine(basePath, "Theme Fonts", "Office 2007 - 2010.xml"),
-              Path.Combine(basePath, "Theme Colors", "Office 2007 - 2010.xml")
-            };
-
-            foreach (var themeFile in themeFiles)
-            {
-              if (!themePaths.Contains(themeFile))
-              {
-                themePaths.Add(themeFile);
-              }
-            }
-
-            Logger.Debug($"Found theme directory: {basePath}");
-            break; // Dừng khi tìm thấy thư mục hợp lệ đầu tiên
-          }
-        }
-
-        Logger.Debug($"Located {themePaths.Count} theme files");
-      }
-      catch (Exception ex)
-      {
-        Logger.Warning($"Error getting theme paths: {ex.Message}");
-      }
-
-      return themePaths;
-    }
-
-    /// <summary>
-    /// Á dụng theme file cho workbook
-    /// Sử dụng Excel Theme API với fallback mechanism
-    ///
-    /// Quy trình:
-    /// 1. Thử ApplyTheme() method
-    /// 2. Nếu thất bại, thử ApplyThemeFromXml() fallback
-    /// 3. Log kết quả
-    ///
-    /// </summary>
-    /// <param name="wb">Workbook cần áp dụng theme</param>
-    /// <param name="themePath">Đường dẫn theme file</param>
-    private void ApplyThemeToWorkbook(Workbook wb, string themePath)
-    {
-      try
-      {
-        var themeName = Path.GetFileNameWithoutExtension(themePath);
-
-        // Thử method chính: ApplyTheme
-        wb.ApplyTheme(themePath);
-        Logger.Debug($"Applied theme '{themeName}' to workbook using ApplyTheme");
-
-      }
-      catch (Exception ex)
-      {
-        Logger.Warning($"ApplyTheme failed for '{Path.GetFileName(themePath)}', trying alternative method: {ex.Message}");
-
-        try
-        {
-          // Fallback: Áp dụng từ XML
-          ApplyThemeFromXml(wb, themePath);
-        }
-        catch (Exception ex2)
-        {
-          Logger.Error($"Alternative theme application also failed for '{Path.GetFileName(themePath)}': {ex2.Message}");
-          throw;
-        }
-      }
-    }
-
-    /// <summary>
-    /// Áp dụng theme từ XML file (fallback method)
-    /// Đọc và parse theme XML để áp dụng settings thủ công
-    ///
-    /// </summary>
-    /// <param name="wb">Workbook cần áp dụng theme</param>
-    /// <param name="themePath">Đường dẫn theme XML file</param>
-    private void ApplyThemeFromXml(Workbook wb, string themePath)
-    {
-      try
-      {
-        // Đọc theme XML
-        var xmlDoc = XDocument.Load(themePath);
-
-        // TODO: Implement manual theme application từ XML
-        // Hiện tại chỉ log để biết đã thử fallback
-        Logger.Debug("Applied theme settings from XML file (basic implementation)");
-
-      }
-      catch (Exception ex)
-      {
-        Logger.Error($"Error parsing theme XML from {themePath}: {ex.Message}");
-        throw;
       }
     }
 

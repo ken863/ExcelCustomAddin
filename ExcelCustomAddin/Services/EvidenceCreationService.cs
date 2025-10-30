@@ -389,16 +389,19 @@ namespace ExcelCustomAddin
           newSheet.PageSetup.Zoom = config.Zoom;
         }
 
-        // Set margins
-        newSheet.PageSetup.LeftMargin = config.LeftMargin;
-        newSheet.PageSetup.RightMargin = config.RightMargin;
-        newSheet.PageSetup.TopMargin = config.TopMargin;
-        newSheet.PageSetup.BottomMargin = config.BottomMargin;
-        newSheet.PageSetup.HeaderMargin = config.HeaderMargin;
-        newSheet.PageSetup.FooterMargin = config.FooterMargin;
+        // Set margins (convert from inches to points: 1 inch = 72 points)
+        const double InchesToPoints = 72.0;
+        newSheet.PageSetup.LeftMargin = config.LeftMargin * InchesToPoints;
+        newSheet.PageSetup.RightMargin = config.RightMargin * InchesToPoints;
+        newSheet.PageSetup.TopMargin = config.TopMargin * InchesToPoints;
+        newSheet.PageSetup.BottomMargin = config.BottomMargin * InchesToPoints;
+        newSheet.PageSetup.HeaderMargin = config.HeaderMargin * InchesToPoints;
+        newSheet.PageSetup.FooterMargin = config.FooterMargin * InchesToPoints;
         newSheet.PageSetup.CenterHorizontally = config.CenterHorizontally;
 
         // Set column widths and row heights
+        // ColumnWidth: measured in characters (default character width)
+        // RowHeight: measured in points
         Range columnRange = newSheet.Range["A1", $"{SheetConfigManager.GetGeneralConfig().PageBreakColumnName}1"];
         columnRange.ColumnWidth = config.ColumnWidth;
         columnRange.RowHeight = config.RowHeight;
