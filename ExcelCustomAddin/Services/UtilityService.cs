@@ -300,71 +300,23 @@ namespace ExcelCustomAddin
 
             string sanitized = input.Trim();
 
-            // Xử lý các loại giá trị đặc biệt
-
-            // 1. Công thức (bắt đầu bằng =)
-            if (sanitized.StartsWith("="))
-            {
-                return "Formula_Range";
-            }
-
-            // 2. Giá trị boolean
-            if (sanitized.Equals("TRUE", StringComparison.OrdinalIgnoreCase))
-                return "Bool_True";
-            if (sanitized.Equals("FALSE", StringComparison.OrdinalIgnoreCase))
-                return "Bool_False";
-
-            // 3. Giá trị số thuần túy
-            if (double.TryParse(sanitized, out double numericValue))
-            {
-                return $"Num_{numericValue}";
-            }
-
-            // 4. Giá trị ngày tháng
-            if (DateTime.TryParse(sanitized, out DateTime dateValue))
-            {
-                return $"Date_{dateValue:yyyy_MM_dd}";
-            }
-
-            // 5. Từ khóa Excel reserved
-            string[] excelKeywords = { "R", "C", "TRUE", "FALSE", "AND", "OR", "NOT", "IF", "SUM", "COUNT", "AVERAGE", "MIN", "MAX" };
-            if (Array.Exists(excelKeywords, keyword => keyword.Equals(sanitized, StringComparison.OrdinalIgnoreCase)))
-            {
-                return $"{sanitized}_Range";
-            }
-
-            // 6. Thay thế ký tự không hợp lệ bằng underscore
-            sanitized = Regex.Replace(sanitized, @"[^a-zA-Z0-9_]", "_");
-
-            // 7. Loại bỏ nhiều underscore liên tiếp
+            // Loại bỏ nhiều underscore liên tiếp
             sanitized = Regex.Replace(sanitized, @"_+", "_");
 
-            // 8. Loại bỏ underscore đầu và cuối
+            // Loại bỏ underscore đầu và cuối
             sanitized = sanitized.Trim('_');
 
-            // 9. Nếu rỗng sau khi làm sạch, trả về empty
+            // Nếu rỗng sau khi làm sạch, trả về empty
             if (string.IsNullOrEmpty(sanitized))
                 return string.Empty;
 
-            // 10. Đảm bảo bắt đầu bằng chữ cái (không phải số hoặc underscore)
-            if (char.IsDigit(sanitized[0]) || sanitized[0] == '_')
-            {
-                sanitized = $"R_{sanitized}";
-            }
-
-            // 11. Xử lý tên quá ngắn (< 2 ký tự)
-            if (sanitized.Length < 2)
-            {
-                sanitized = $"Short_{sanitized}";
-            }
-
-            // 12. Giới hạn độ dài và loại bỏ underscore cuối
+            // Giới hạn độ dài và loại bỏ underscore cuối
             if (sanitized.Length > 255)
             {
                 sanitized = sanitized.Substring(0, 255).TrimEnd('_');
             }
 
-            // 13. Kiểm tra tính hợp lệ cuối cùng
+            // Kiểm tra tính hợp lệ cuối cùng
             return IsValidNamedRangeName(sanitized) ? sanitized : string.Empty;
         }
 
@@ -533,7 +485,7 @@ namespace ExcelCustomAddin
                 if (string.IsNullOrEmpty(proposedName))
                 {
                     // Fallback 2: Dùng tên generic với địa chỉ cell
-                    proposedName = $"Cell_{cellAddress.Replace("$", "").Replace(":", "_")}";
+                    proposedName = $"エビデンス_{cellAddress.Replace("$", "").Replace(":", "_")}";
                 }
 
                 // Bước 4: Đảm bảo tên unique trong workbook
