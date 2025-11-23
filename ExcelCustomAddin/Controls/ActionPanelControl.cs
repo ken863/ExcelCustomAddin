@@ -150,6 +150,7 @@ namespace ExcelCustomAddin
         public event EventHandler ChangeSheetNameEvent;
         public event EventHandler InsertMultipleImagesEvent;
         public event EventHandler FormatImagesEvent;
+        public event EventHandler UpdateEvidenceNoEvent;
 
         public event EventHandler<PinSheetEventArgs> PinSheetEvent;
 
@@ -498,6 +499,12 @@ namespace ExcelCustomAddin
         private void cbAutoFixWidth_CheckedChanged(object sender, EventArgs e)
         {
             numScalePercent.Enabled = cbScalePercent.Checked;
+        }
+
+        private void btnResetEvidenceNo_Click(object sender, EventArgs e)
+        {
+            if (this.UpdateEvidenceNoEvent != null)
+                this.UpdateEvidenceNoEvent(this, e);
         }
     }
 }

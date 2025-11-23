@@ -220,7 +220,7 @@ namespace ExcelCustomAddin
         /// <param name="activeSheet">Sheet chứa cell</param>
         /// <param name="cellsToProcessCount">Số lượng cells đang xử lý</param>
         /// <returns>Giá trị cell hoặc auto-generated name</returns>
-        public string GetOrGenerateCellValue(Range cell, Worksheet activeSheet, int cellsToProcessCount)
+        public string GetOrEvidenceNoText(Range cell, Worksheet activeSheet, int cellsToProcessCount)
         {
             string cellValue = cell.Value2 != null ? cell.Value2.ToString().Trim() : "";
 
@@ -229,7 +229,7 @@ namespace ExcelCustomAddin
                 string currentSheetName = activeSheet.Name;
                 if (currentSheetName == "共通" || currentSheetName == "テスト項目")
                 {
-                    cellValue = UtilityService.GenerateAutoSheetName(activeSheet, cell.Column, currentSheetName);
+                    cellValue = UtilityService.GenerateAutoEvidenceNoText(activeSheet, cell.Column, currentSheetName, 0);
                     if (!string.IsNullOrEmpty(cellValue))
                     {
                         cell.Value2 = cellValue;
@@ -261,7 +261,7 @@ namespace ExcelCustomAddin
         /// <param name="activeSheet">Sheet nguồn</param>
         /// <returns>Tuple chứa danh sách sheets đã tạo, sheets đã tồn tại, và error messages</returns>
         public (List<string> createdSheets, List<string> existingSheets, List<string> errorMessages)
-            ProcessEvidenceCells(List<Range> cellsToProcess, Workbook activeWorkbook, Worksheet activeSheet)
+            ProcessEvidenceCells(List<Range> cellsToProcess, Workbook activeWorkbook, Worksheet activeSheet, string evidenceNoText = "")
         {
             var createdSheets = new List<string>();
             var existingSheets = new List<string>();
@@ -278,7 +278,7 @@ namespace ExcelCustomAddin
             {
                 try
                 {
-                    string cellValue = GetOrGenerateCellValue(cell, activeSheet, cellsToProcess.Count);
+                    string cellValue = GetOrEvidenceNoText(cell, activeSheet, cellsToProcess.Count);
 
                     if (string.IsNullOrEmpty(cellValue))
                     {
@@ -515,7 +515,7 @@ namespace ExcelCustomAddin
 
             newSheet.Hyperlinks.Add(backCell, "", backAddress, Type.Missing, "<Back");
             backCell.Font.Name = SheetConfigManager.GetGeneralConfig().BackButtonFontName;
-            backCell.HorizontalAlignment = Microsoft.Office.Interop.Excel.XlHAlign.xlHAlignLeft;
+            backCell.HorizontalAlignment = XlHAlign.xlHAlignLeft;
         }
 
         #endregion
@@ -604,5 +604,211 @@ namespace ExcelCustomAddin
         }
 
         #endregion
+
+        /// <summary>
+        /// UpdateEvidenceNo
+        /// </summary>
+        public void UpdateEvidenceNo()
+        {
+            try
+            {
+                var app = Globals.ThisAddIn.Application;
+                var activeWorkbook = app.ActiveWorkbook;
+                var activeSheet = app.ActiveSheet as Worksheet;
+
+                var sheetConfig = SheetConfigManager.GetSheetConfig(activeSheet.Name);
+                string numberFormat = sheetConfig.NumberFormat;
+                string prefix = sheetConfig.Prefix;
+                bool.TryParse(sheetConfig.IsHorizontal, out bool isHorizontal);
+
+                // Lấy dòng cuối cùng
+                var lastRow =UtilityService.GetLastRow(activeSheet);
+
+                if (isHorizontal)
+                {
+                    // Nếu là sheet ngang, thì chỉ cần thêm evidence mới vào cột cuối, nên không cần phải cập nhật
+                    MessageBox.Show("Vì là sheet ngang, thì chỉ cần thêm evidence mới vào cột cuối, nên không cần phải cập nhật");
+                    return;
+                }
+                else
+                {
+                    const string idColumnName = "B";
+                    const string evidenceNoTextColumnName = "BH";
+                    const string confirmColumnName = "AH";
+                    const int evidenceNoStartRow = 3;
+
+                    int evidenceNoTextColumnIdx = UtilityService.GetColumnIndex(evidenceNoTextColumnName);
+
+                    for (int i = evidenceNoStartRow; i <= lastRow; i++)
+                    {
+                        var processingCell = activeSheet.Cells[i, evidenceNoTextColumnName];
+
+                        // Lấy giá trị ID
+                        var idCellValue = activeSheet.Cells[i, idColumnName].Value2;
+                        if (idCellValue == null || string.IsNullOrWhiteSpace(idCellValue.ToString()))
+                        {
+                            Logger.Warning($"Dòng {i} không có giá trị ID trong cột {idColumnName}, bỏ qua cập nhật số bằng chứng.");
+                            continue;
+                        }
+                        int.TryParse(idCellValue.ToString(), out int idCellValueInt);
+
+                        // Lấy giá trị hiện tại của cell
+                        string currentCellValue = activeSheet.Cells[i, evidenceNoTextColumnName].Value2?.ToString()?.Trim();
+                        int currentIdInt = 0;
+
+                        if (!string.IsNullOrEmpty(currentCellValue))
+                        {
+                            string[] currentValueSplitArr = currentCellValue.Split('_');
+                            string currentIdStr = currentValueSplitArr.Length > 1 ? currentValueSplitArr[currentValueSplitArr.Length - 1] : "0";
+                            int.TryParse(currentIdStr, out currentIdInt);
+                        }
+
+                        // Lấy ra EvidenceText: vd: "エビデンス_001"
+                        string evidenceNoText = UtilityService.GenerateAutoEvidenceNoText(activeSheet, evidenceNoTextColumnIdx, activeSheet.Name, idCellValueInt);
+
+                        // Xoá Named Range theo newEvidenceNo nếu đã tồn tại
+                        DeleteNamedRangeByName(activeWorkbook, evidenceNoText);
+
+                        // Kiểm tra xem cột Kết quả mong muốn có giá trị hay không?
+                        var confirmResultCell = activeSheet.Cells[i, confirmColumnName];
+                        var confirmResultCellValue = confirmResultCell.Value2;
+                        if (confirmResultCellValue == null || string.IsNullOrWhiteSpace(confirmResultCellValue.ToString()))
+                        {
+                            // Nếu không có giá trị thì không cần xử lý tiếp theo
+                            continue;
+                        }
+
+                        if (idCellValueInt > 0)
+                        {
+                            // Nếu cell hiện tại đang trống
+                            if (string.IsNullOrWhiteSpace(currentCellValue))
+                            {
+                                // Thực hiện backup sheet nếu sheet với tên mới đã tồn tại
+                                bool sheetExists = IsSheetExist(activeWorkbook, evidenceNoText);
+                                if (sheetExists)
+                                {
+                                    // Nếu sheet đã tồn tại, thực hiện đổi tên để backup
+                                    string backupSheetName = $"{evidenceNoText}_Backup";
+                                    activeWorkbook.Worksheets[evidenceNoText].Name = backupSheetName;
+                                }
+
+                                // Setting newEvidenceNo cho cell hiện tại
+                                activeSheet.Cells[i, evidenceNoTextColumnName].Value2 = evidenceNoText;
+
+                                // Tạo sheet tương ứng
+                                var cellsToProcess = new List<Range> { activeSheet.Cells[i, evidenceNoTextColumnName] };
+                                ProcessEvidenceCells(cellsToProcess, activeWorkbook, activeSheet, evidenceNoText);
+
+                                // Logger thông tin
+                                Logger.Info($"Cập nhật số bằng chứng cho dòng {i}: {evidenceNoText}");
+
+                                continue;
+                            }
+                            else
+                            {
+                                // Nếu cell hiện tại có giá trị, so sánh với ID
+                                if (currentIdInt == idCellValueInt)
+                                {
+                                    // Nếu số hiện tại đã đúng, không cần cập nhật
+                                    continue;
+                                }
+                                else
+                                {
+                                    // Nếu số hiện tại khác với ID
+                                    // Cập nhật số bằng chứng mới
+                                    activeSheet.Cells[i, evidenceNoTextColumnName].Value2 = evidenceNoText;
+
+                                    // Kiểm tra xem sheet với tên mới có tồn tại không
+                                    bool newSheetExists = IsSheetExist(activeWorkbook, evidenceNoText);
+
+                                    if (newSheetExists)
+                                    {
+                                        // Nếu sheet đã tồn tại, thực hiện đổi tên để backup
+                                        string backupSheetName = $"{evidenceNoText}_Backup";
+                                        activeWorkbook.Worksheets[evidenceNoText].Name = backupSheetName;
+                                    }
+
+                                    // Kiểm tra xem sheet với số bằng chứng hiện tại + chuỗi "_Backup" có tồn tại không
+                                    bool backupSheetExists = IsSheetExist(activeWorkbook, $"{currentCellValue}_Backup");
+                                    if (backupSheetExists)
+                                    {
+                                        // Nếu backup sheet tồn tại 
+                                        // Đổi tên sheet có tên _Backup thành số bằng chứng mới
+                                        activeWorkbook.Worksheets[$"{currentCellValue}_Backup"].Name = evidenceNoText;
+
+                                        // Tạo hyperlink đến sheet mới
+                                        CreateHyperlinkToNewSheet(processingCell, activeSheet, activeWorkbook.Worksheets[evidenceNoText], evidenceNoText);
+                                    }
+                                    else
+                                    {
+                                        // Nếu backup sheet không tồn tại
+                                        // Gọi hàm ProcessEvidenceCells để tạo sheet mới với số bằng chứng mới
+                                        var cellsToProcess = new List<Range> { activeSheet.Cells[i, evidenceNoTextColumnName] };
+                                        ProcessEvidenceCells(cellsToProcess, activeWorkbook, activeSheet, evidenceNoText);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                MessageBox.Show("Cập nhật số bằng chứng hoàn tất.", "Thông báo", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Có lỗi xảy ra khi cập nhật số bằng chứng: {ex.Message}", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private bool IsSheetExist(Workbook workbook, string sheetName)
+        {
+            foreach (Worksheet ws in workbook.Worksheets)
+            {
+                if (ws.Name.Equals(sheetName, StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// Xóa Named Range theo tên
+        /// Duyệt qua tất cả named ranges trong workbook và xóa các range có tên khớp
+        /// 
+        /// </summary>
+        /// <param name="workbook">Workbook chứa các named ranges</param>
+        /// <param name="rangeName">Tên của named range cần xóa</param>
+        private void DeleteNamedRangeByName(Workbook workbook, string rangeName)
+        {
+            if (workbook == null || string.IsNullOrEmpty(rangeName))
+                return;
+
+            try
+            {
+                var names = workbook.Names;
+                // Duyệt ngược để tránh lỗi index khi xóa
+                for (int i = names.Count; i >= 1; i--)
+                {
+                    try
+                    {
+                        var nameObj = names.Item(i);
+                        if (nameObj.Name.Equals(rangeName, StringComparison.OrdinalIgnoreCase))
+                        {
+                            nameObj.Delete();
+                            Logger.Debug($"Xóa Named Range: {rangeName}");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Warning($"Lỗi khi xóa named range tại index {i}: {ex.Message}");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Warning($"Lỗi khi xóa named range '{rangeName}': {ex.Message}");
+            }
+        }
     }
 }

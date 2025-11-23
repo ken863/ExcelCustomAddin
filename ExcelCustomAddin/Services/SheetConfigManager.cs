@@ -42,11 +42,16 @@ namespace ExcelCustomAddin
             /// <summary>Prefix để generate tên sheet (VD: "共通_", "エビデンス_")</summary>
             public string Prefix { get; set; }
 
+            /// <summary>Reference column header cho sheet</summary>
+            public string ReferenceColumnHeader { get; set; }
+
             /// <summary>Format số cho auto-numbering (VD: "D2" = 01, 02, ...)</summary>
             public string NumberFormat { get; set; }
 
             /// <summary>Mô tả chức năng của sheet config</summary>
             public string Description { get; set; }
+
+            public string IsHorizontal { get; set; }
         }
 
         /// <summary>
@@ -116,10 +121,9 @@ namespace ExcelCustomAddin
         private static string ConfigFilePath => Path.Combine(GetAddInDirectory(), ConfigFileName);
 
         // Cached configuration instances
-        private static List<SheetConfig> _specialSheets;
-        private static List<SheetConfig> _extendedSheets;
-        private static GeneralConfig _generalConfig;
-        private static LoggingConfig _loggingConfig;
+        internal static List<SheetConfig> _sheets;
+        internal static GeneralConfig _generalConfig;
+        internal static LoggingConfig _loggingConfig;
 
         #endregion
 
@@ -280,37 +284,81 @@ namespace ExcelCustomAddin
             var doc = XDocument.Load(configPath);
             var root = doc.Root;
 
-            // Load Special Sheets
-            _specialSheets = new List<SheetConfig>();
-            var specialSheetsElement = root.Element("SpecialSheets");
-            if (specialSheetsElement != null)
+            // Load Sheets
+            _sheets = new List<SheetConfig>();
+            var sheetsElement = root.Element("Sheets");
+            
+            if (sheetsElement != null)
             {
-                foreach (var sheetElement in specialSheetsElement.Elements("Sheet"))
+                // New unified structure
+                foreach (var sheetElement in sheetsElement.Elements("Sheet"))
                 {
-                    _specialSheets.Add(new SheetConfig
+                    var sheetConfig = new SheetConfig
                     {
                         Name = sheetElement.Element("Name")?.Value ?? "",
                         Prefix = sheetElement.Element("Prefix")?.Value ?? "",
+                        ReferenceColumnHeader = sheetElement.Element("ReferenceColumnHeader")?.Value ?? "",
                         NumberFormat = sheetElement.Element("NumberFormat")?.Value ?? "D2",
-                        Description = sheetElement.Element("Description")?.Value ?? ""
-                    });
+                        Description = sheetElement.Element("Description")?.Value ?? "",
+                        IsHorizontal = sheetElement.Element("IsHorizontal")?.Value ?? "false",
+                    };
+                    _sheets.Add(sheetConfig);
+                    Logger.Debug($"Loaded sheet: {sheetConfig.Name}, Prefix: {sheetConfig.Prefix}, RefHeader: {sheetConfig.ReferenceColumnHeader}");
                 }
+                Logger.Info($"Loaded {_sheets.Count} sheets from unified <Sheets> element");
             }
-
-            // Load Extended Sheets
-            _extendedSheets = new List<SheetConfig>();
-            var extendedSheetsElement = root.Element("ExtendedSheets");
-            if (extendedSheetsElement != null)
+            else
             {
-                foreach (var sheetElement in extendedSheetsElement.Elements("Sheet"))
+                // Fallback to old structure
+                Logger.Info("Unified <Sheets> element not found, trying legacy structure...");
+                
+                // Load Special Sheets
+                var specialSheetsElement = root.Element("SpecialSheets");
+                if (specialSheetsElement != null)
                 {
-                    _extendedSheets.Add(new SheetConfig
+                    foreach (var sheetElement in specialSheetsElement.Elements("Sheet"))
                     {
-                        Name = sheetElement.Element("Name")?.Value ?? "",
-                        Prefix = sheetElement.Element("Prefix")?.Value ?? "",
-                        NumberFormat = sheetElement.Element("NumberFormat")?.Value ?? "D2",
-                        Description = sheetElement.Element("Description")?.Value ?? ""
-                    });
+                        var sheetConfig = new SheetConfig
+                        {
+                            Name = sheetElement.Element("Name")?.Value ?? "",
+                            Prefix = sheetElement.Element("Prefix")?.Value ?? "",
+                            ReferenceColumnHeader = sheetElement.Element("ReferenceColumnHeader")?.Value ?? "",
+                            NumberFormat = sheetElement.Element("NumberFormat")?.Value ?? "D2",
+                            Description = sheetElement.Element("Description")?.Value ?? "",
+                            IsHorizontal = sheetElement.Element("IsHorizontal")?.Value ?? "false",
+                        };
+                        _sheets.Add(sheetConfig);
+                        Logger.Debug($"Loaded special sheet: {sheetConfig.Name}, Prefix: {sheetConfig.Prefix}");
+                    }
+                }
+
+                // Load Extended Sheets
+                var extendedSheetsElement = root.Element("ExtendedSheets");
+                if (extendedSheetsElement != null)
+                {
+                    foreach (var sheetElement in extendedSheetsElement.Elements("Sheet"))
+                    {
+                        var sheetConfig = new SheetConfig
+                        {
+                            Name = sheetElement.Element("Name")?.Value ?? "",
+                            Prefix = sheetElement.Element("Prefix")?.Value ?? "",
+                            ReferenceColumnHeader = sheetElement.Element("ReferenceColumnHeader")?.Value ?? "",
+                            NumberFormat = sheetElement.Element("NumberFormat")?.Value ?? "D2",
+                            Description = sheetElement.Element("Description")?.Value ?? "",
+                            IsHorizontal = sheetElement.Element("IsHorizontal")?.Value ?? "false",
+                        };
+                        _sheets.Add(sheetConfig);
+                        Logger.Debug($"Loaded extended sheet: {sheetConfig.Name}, Prefix: {sheetConfig.Prefix}");
+                    }
+                }
+                
+                if (_sheets.Count > 0)
+                {
+                    Logger.Info($"Loaded {_sheets.Count} sheets from legacy structure (SpecialSheets + ExtendedSheets)");
+                }
+                else
+                {
+                    Logger.Warning("No sheets found in either unified or legacy XML structure");
                 }
             }
 
@@ -412,7 +460,7 @@ namespace ExcelCustomAddin
                 Logger.Configure(_loggingConfig.LogDirectory, _generalConfig.EnableDebugLog, _loggingConfig.LogFileName);
             }
 
-            Logger.Info($"Loaded configuration: {_specialSheets.Count} special sheets, {_extendedSheets.Count} extended sheets");
+            Logger.Info($"Loaded configuration: {_sheets.Count} sheets");
         }
 
         /// <summary>
@@ -422,25 +470,46 @@ namespace ExcelCustomAddin
         /// </summary>
         private static void CreateDefaultConfig()
         {
-            _specialSheets = new List<SheetConfig>
+            _sheets = new List<SheetConfig>
       {
         new SheetConfig
         {
           Name = "共通",
           Prefix = "共通_",
+          ReferenceColumnHeader = "参考 No.",
           NumberFormat = "D2",
-          Description = "Sheet chung với prefix 共通_"
+          Description = "Sheet chung với prefix 共通_",
+          IsHorizontal = "False"
         },
         new SheetConfig
         {
           Name = "テスト項目",
           Prefix = "エビデンス_",
+          ReferenceColumnHeader = "参考 No.",
           NumberFormat = "D2",
-          Description = "Sheet test items với prefix エビデンス_"
+          Description = "Sheet test items với prefix エビデンス_",
+          IsHorizontal = "False"
+        },
+        new SheetConfig
+        {
+          Name = "設計書",
+          Prefix = "設計_",
+          ReferenceColumnHeader = "No.",
+          NumberFormat = "D3",
+          Description = "Sheet thiết kế với prefix 設計_",
+          IsHorizontal = "False"
+        },
+        new SheetConfig
+        {
+          Name = "検証結果",
+          Prefix = "検証_",
+          ReferenceColumnHeader = "検証 No.",
+          NumberFormat = "D2",
+          Description = "Sheet kết quả kiểm chứng với prefix 検証_",
+          IsHorizontal = "False"
         }
       };
 
-            _extendedSheets = new List<SheetConfig>();
             _generalConfig = new GeneralConfig();
             _loggingConfig = new LoggingConfig();
 
@@ -449,13 +518,14 @@ namespace ExcelCustomAddin
             {
                 var doc = new XDocument(
                   new XElement("SheetConfiguration",
-                    new XElement("SpecialSheets",
-                      from sheet in _specialSheets
+                    new XElement("Sheets",
+                      from sheet in _sheets
                       select new XElement("Sheet",
                         new XElement("Name", sheet.Name),
                         new XElement("Prefix", sheet.Prefix),
                         new XElement("NumberFormat", sheet.NumberFormat),
-                        new XElement("Description", sheet.Description)
+                        new XElement("Description", sheet.Description),
+                        new XElement("IsHorizontal", sheet.IsHorizontal)
                       )
                     ),
                     new XElement("ExtendedSheets"),
@@ -523,16 +593,16 @@ namespace ExcelCustomAddin
         /// <returns>SheetConfig hoặc null nếu không tìm thấy</returns>
         public static SheetConfig GetSheetConfig(string sheetName)
         {
-            if (_specialSheets == null)
+            if (_sheets == null)
                 LoadConfiguration();
 
             // Tìm trong special sheets trước
-            var config = _specialSheets?.FirstOrDefault(s => s.Name == sheetName);
+            var config = _sheets?.FirstOrDefault(s => s.Name == sheetName);
             if (config != null)
                 return config;
 
             // Tìm trong extended sheets
-            return _extendedSheets?.FirstOrDefault(s => s.Name == sheetName);
+            return null;
         }
 
         /// <summary>
@@ -551,37 +621,41 @@ namespace ExcelCustomAddin
 
         /// <summary>
         /// Lấy tất cả sheet configs
-        /// Kết hợp special và extended sheets
+        /// Lazy load configuration nếu chưa được load
         ///
         /// </summary>
         /// <returns>Danh sách tất cả sheet configs</returns>
         public static List<SheetConfig> GetAllSheetConfigs()
         {
-            if (_specialSheets == null)
+            if (_sheets == null)
                 LoadConfiguration();
 
-            var allConfigs = new List<SheetConfig>();
-            if (_specialSheets != null)
-                allConfigs.AddRange(_specialSheets);
-            if (_extendedSheets != null)
-                allConfigs.AddRange(_extendedSheets);
-
-            return allConfigs;
+            Logger.Info($"GetAllSheetConfigs returning {_sheets?.Count ?? 0} sheets");
+            return _sheets ?? new List<SheetConfig>();
         }
 
         /// <summary>
-        /// Lấy cấu hình logging
+        /// Lấy tất cả special sheet configs (deprecated - use GetAllSheetConfigs instead)
         /// Lazy load configuration nếu chưa được load
         ///
         /// </summary>
-        /// <returns>LoggingConfig instance</returns>
-        public static LoggingConfig GetLoggingConfig()
+        /// <returns>Danh sách special sheet configs</returns>
+        [Obsolete("Use GetAllSheetConfigs() instead. SpecialSheets and ExtendedSheets have been merged.")]
+        public static List<SheetConfig> GetSpecialSheets()
         {
-            if (_loggingConfig == null)
-            {
-                LoadConfiguration();
-            }
-            return _loggingConfig ?? new LoggingConfig();
+            return GetAllSheetConfigs();
+        }
+
+        /// <summary>
+        /// Lấy tất cả extended sheet configs (deprecated - use GetAllSheetConfigs instead)
+        /// Lazy load configuration nếu chưa được load
+        ///
+        /// </summary>
+        /// <returns>Danh sách extended sheet configs</returns>
+        [Obsolete("Use GetAllSheetConfigs() instead. SpecialSheets and ExtendedSheets have been merged.")]
+        public static List<SheetConfig> GetExtendedSheets()
+        {
+            return GetAllSheetConfigs();
         }
 
         /// <summary>
@@ -591,8 +665,7 @@ namespace ExcelCustomAddin
         /// </summary>
         public static void ReloadConfiguration()
         {
-            _specialSheets = null;
-            _extendedSheets = null;
+            _sheets = null;
             _generalConfig = null;
             _loggingConfig = null;
             LoadConfiguration();
@@ -609,6 +682,94 @@ namespace ExcelCustomAddin
             return GetSheetConfig(sheetName) != null;
         }
 
+        /// <summary>
+        /// Lưu cấu hình vào file XML
+        /// Serialize tất cả config objects thành XML và ghi ra file
+        ///
+        /// </summary>
+        public static void SaveConfiguration()
+        {
+            try
+            {
+                var doc = new XDocument(
+                  new XElement("SheetConfiguration",
+                    new XElement("Sheets",
+                      from sheet in _sheets ?? new List<SheetConfig>()
+                      select new XElement("Sheet",
+                        new XElement("Name", sheet.Name),
+                        new XElement("Prefix", sheet.Prefix),
+                        new XElement("ReferenceColumnHeader", sheet.ReferenceColumnHeader ?? ""),
+                        new XElement("NumberFormat", sheet.NumberFormat),
+                        new XElement("Description", sheet.Description),
+                        new XElement("IsHorizontal", sheet.IsHorizontal)
+                      )
+                    ),
+                    new XElement("GeneralSettings",
+                      new XElement("HeaderRowIndex", _generalConfig?.HeaderRowIndex ?? 2),
+                      new XElement("AutoFillCell", _generalConfig?.AutoFillCell ?? true),
+                      new XElement("EnableDebugLog", _generalConfig?.EnableDebugLog ?? true),
+                      new XElement("StartingNumber", _generalConfig?.StartingNumber ?? 1),
+                      new XElement("PageBreakColumnName", _generalConfig?.PageBreakColumnName ?? "AR"),
+                      new XElement("EvidenceFontName", _generalConfig?.EvidenceFontName ?? "MS PGothic"),
+                      new XElement("BackButtonFontName", _generalConfig?.BackButtonFontName ?? "Calibri"),
+                      new XElement("PrintAreaLastRowIdx", _generalConfig?.PrintAreaLastRowIdx ?? 38),
+                      new XElement("ColumnWidth", _generalConfig?.ColumnWidth ?? 2.38),
+                      new XElement("RowHeight", _generalConfig?.RowHeight ?? 12.6),
+                      new XElement("FontSize", _generalConfig?.FontSize ?? 11),
+                      new XElement("PageOrientation", _generalConfig?.PageOrientation ?? "Landscape"),
+                      new XElement("PaperSize", _generalConfig?.PaperSize ?? "A4"),
+                      new XElement("Zoom", _generalConfig?.Zoom ?? 100),
+                      new XElement("FitToPagesWide", _generalConfig?.FitToPagesWide ?? false),
+                      new XElement("FitToPagesTall", _generalConfig?.FitToPagesTall ?? false),
+                      new XElement("LeftMargin", _generalConfig?.LeftMargin ?? 0.75),
+                      new XElement("RightMargin", _generalConfig?.RightMargin ?? 0.75),
+                      new XElement("TopMargin", _generalConfig?.TopMargin ?? 1.0),
+                      new XElement("BottomMargin", _generalConfig?.BottomMargin ?? 1.0),
+                      new XElement("HeaderMargin", _generalConfig?.HeaderMargin ?? 0.5),
+                      new XElement("FooterMargin", _generalConfig?.FooterMargin ?? 0.5),
+                      new XElement("CenterHorizontally", _generalConfig?.CenterHorizontally ?? true),
+                      new XElement("WindowZoom", _generalConfig?.WindowZoom ?? 100),
+                      new XElement("ViewMode", _generalConfig?.ViewMode ?? "PageBreakPreview")
+                    ),
+                    new XElement("LoggingSettings",
+                      new XElement("LogDirectory", _loggingConfig?.LogDirectory ?? @"C:\ExcelCustomAddin"),
+                      new XElement("EnableFileLogging", _loggingConfig?.EnableFileLogging ?? true),
+                      new XElement("EnableDebugOutput", _loggingConfig?.EnableDebugOutput ?? true),
+                      new XElement("LogLevel", _loggingConfig?.LogLevel ?? "DEBUG"),
+                      new XElement("LogFileName", _loggingConfig?.LogFileName ?? "ExcelAddin")
+                    )
+                  )
+                );
+
+                string configDir = GetAddInDirectory();
+                Directory.CreateDirectory(configDir);
+                string configPath = Path.Combine(configDir, ConfigFileName);
+                doc.Save(configPath);
+
+                Logger.Info($"Saved configuration to {configPath}");
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error saving configuration: {ex.Message}", ex);
+                throw;
+            }
+        }
+
         #endregion
+
+        /// <summary>
+        /// Lấy cấu hình logging
+        /// Lazy load configuration nếu chưa được load
+        ///
+        /// </summary>
+        /// <returns>LoggingConfig instance</returns>
+        public static LoggingConfig GetLoggingConfig()
+        {
+            if (_loggingConfig == null)
+            {
+                LoadConfiguration();
+            }
+            return _loggingConfig ?? new LoggingConfig();
+        }
     }
 }

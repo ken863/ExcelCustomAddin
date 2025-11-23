@@ -280,5 +280,16 @@
         }
 
         #endregion
+
+        /// <summary>
+        /// Event handler cho nút Insert Multiple Images
+        /// Delegate thực thi cho ImageProcessingService
+        /// </summary>
+        /// <param name="sender">Object gọi event (ActionPanelControl)</param>
+        /// <param name="e">Event arguments</param>
+        internal void UpdateEvidenceNo(object sender, EventArgs e)
+        {
+            _evidenceService.UpdateEvidenceNo();
+        }
     }
 }

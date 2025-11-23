@@ -31,12 +31,13 @@
             this.components = new System.ComponentModel.Container();
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(ActionPanelControl));
             this.metroPanel1 = new MetroFramework.Controls.MetroPanel();
+            this.btnResetEvidenceNo = new System.Windows.Forms.Button();
+            this.imageList1 = new System.Windows.Forms.ImageList(this.components);
             this.groupBox2 = new System.Windows.Forms.GroupBox();
             this.cbScalePercent = new MetroFramework.Controls.MetroRadioButton();
             this.cbAutoFixWidth = new MetroFramework.Controls.MetroRadioButton();
             this.numScalePercent = new System.Windows.Forms.NumericUpDown();
             this.btnFormatImages = new System.Windows.Forms.Button();
-            this.imageList1 = new System.Windows.Forms.ImageList(this.components);
             this.toolStrip1 = new System.Windows.Forms.ToolStrip();
             this.toolStripFilePath = new System.Windows.Forms.ToolStripLabel();
             this.groupBox1 = new System.Windows.Forms.GroupBox();
@@ -60,6 +61,7 @@
             // 
             // metroPanel1
             // 
+            this.metroPanel1.Controls.Add(this.btnResetEvidenceNo);
             this.metroPanel1.Controls.Add(this.groupBox2);
             this.metroPanel1.Controls.Add(this.btnFormatImages);
             this.metroPanel1.Controls.Add(this.toolStrip1);
@@ -79,6 +81,34 @@
             this.metroPanel1.VerticalScrollbarHighlightOnWheel = false;
             this.metroPanel1.VerticalScrollbarSize = 10;
             // 
+            // btnResetEvidenceNo
+            // 
+            this.btnResetEvidenceNo.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.btnResetEvidenceNo.Font = new System.Drawing.Font("Segoe UI Semibold", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.btnResetEvidenceNo.ForeColor = System.Drawing.SystemColors.ActiveCaptionText;
+            this.btnResetEvidenceNo.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            this.btnResetEvidenceNo.ImageKey = "duplicate.png";
+            this.btnResetEvidenceNo.ImageList = this.imageList1;
+            this.btnResetEvidenceNo.Location = new System.Drawing.Point(3, 107);
+            this.btnResetEvidenceNo.Name = "btnResetEvidenceNo";
+            this.btnResetEvidenceNo.Size = new System.Drawing.Size(418, 46);
+            this.btnResetEvidenceNo.TabIndex = 22;
+            this.btnResetEvidenceNo.Text = "Update All Evidence No.";
+            this.btnResetEvidenceNo.UseVisualStyleBackColor = true;
+            this.btnResetEvidenceNo.Click += new System.EventHandler(this.btnResetEvidenceNo_Click);
+            // 
+            // imageList1
+            // 
+            this.imageList1.ImageStream = ((System.Windows.Forms.ImageListStreamer)(resources.GetObject("imageList1.ImageStream")));
+            this.imageList1.TransparentColor = System.Drawing.Color.Transparent;
+            this.imageList1.Images.SetKeyName(0, "analysis.png");
+            this.imageList1.Images.SetKeyName(1, "documentation.png");
+            this.imageList1.Images.SetKeyName(2, "Marcus-Roberto-Google-Play-Google-Translate.512.png");
+            this.imageList1.Images.SetKeyName(3, "settings.png");
+            this.imageList1.Images.SetKeyName(4, "generative-image.png");
+            this.imageList1.Images.SetKeyName(5, "duplicate.png");
+            // 
             // groupBox2
             // 
             this.groupBox2.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
@@ -88,7 +118,7 @@
             this.groupBox2.Controls.Add(this.cbAutoFixWidth);
             this.groupBox2.Controls.Add(this.numScalePercent);
             this.groupBox2.Font = new System.Drawing.Font("Segoe UI Semibold", 9F, System.Drawing.FontStyle.Bold);
-            this.groupBox2.Location = new System.Drawing.Point(4, 107);
+            this.groupBox2.Location = new System.Drawing.Point(4, 159);
             this.groupBox2.Name = "groupBox2";
             this.groupBox2.Size = new System.Drawing.Size(417, 57);
             this.groupBox2.TabIndex = 21;
@@ -144,23 +174,13 @@
             this.btnFormatImages.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
             this.btnFormatImages.ImageKey = "generative-image.png";
             this.btnFormatImages.ImageList = this.imageList1;
-            this.btnFormatImages.Location = new System.Drawing.Point(4, 296);
+            this.btnFormatImages.Location = new System.Drawing.Point(4, 348);
             this.btnFormatImages.Name = "btnFormatImages";
             this.btnFormatImages.Size = new System.Drawing.Size(417, 46);
             this.btnFormatImages.TabIndex = 21;
             this.btnFormatImages.Text = "Format Images";
             this.btnFormatImages.UseVisualStyleBackColor = true;
             this.btnFormatImages.Click += new System.EventHandler(this.btnFormatImages_Click);
-            // 
-            // imageList1
-            // 
-            this.imageList1.ImageStream = ((System.Windows.Forms.ImageListStreamer)(resources.GetObject("imageList1.ImageStream")));
-            this.imageList1.TransparentColor = System.Drawing.Color.Transparent;
-            this.imageList1.Images.SetKeyName(0, "analysis.png");
-            this.imageList1.Images.SetKeyName(1, "documentation.png");
-            this.imageList1.Images.SetKeyName(2, "Marcus-Roberto-Google-Play-Google-Translate.512.png");
-            this.imageList1.Images.SetKeyName(3, "settings.png");
-            this.imageList1.Images.SetKeyName(4, "generative-image.png");
             // 
             // toolStrip1
             // 
@@ -191,7 +211,7 @@
             this.groupBox1.Controls.Add(this.btnInsertPictures);
             this.groupBox1.Controls.Add(this.txtImagePath);
             this.groupBox1.Font = new System.Drawing.Font("Segoe UI Semibold", 9F, System.Drawing.FontStyle.Bold);
-            this.groupBox1.Location = new System.Drawing.Point(4, 170);
+            this.groupBox1.Location = new System.Drawing.Point(4, 222);
             this.groupBox1.Name = "groupBox1";
             this.groupBox1.Size = new System.Drawing.Size(417, 120);
             this.groupBox1.TabIndex = 19;
@@ -282,9 +302,9 @@
             this.listofSheet.FullRowSelect = true;
             this.listofSheet.HeaderStyle = System.Windows.Forms.ColumnHeaderStyle.None;
             this.listofSheet.HideSelection = false;
-            this.listofSheet.Location = new System.Drawing.Point(3, 348);
+            this.listofSheet.Location = new System.Drawing.Point(3, 400);
             this.listofSheet.Name = "listofSheet";
-            this.listofSheet.Size = new System.Drawing.Size(418, 447);
+            this.listofSheet.Size = new System.Drawing.Size(418, 395);
             this.listofSheet.TabIndex = 13;
             this.listofSheet.UseCompatibleStateImageBehavior = false;
             this.listofSheet.View = System.Windows.Forms.View.Details;
@@ -363,5 +383,6 @@
         private System.Windows.Forms.GroupBox groupBox2;
         public MetroFramework.Controls.MetroRadioButton cbAutoFixWidth;
         public MetroFramework.Controls.MetroRadioButton cbScalePercent;
+        private System.Windows.Forms.Button btnResetEvidenceNo;
     }
 }

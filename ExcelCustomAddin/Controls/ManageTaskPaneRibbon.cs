@@ -22,5 +22,24 @@ namespace ExcelCustomAddin
                 MessageBox.Show(ex.Message);
             }
         }
+
+        /// <summary>
+        /// btnSheetConfigManager_Click
+        /// Mở Sheet Configuration Manager form
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void btnSheetConfigManager_Click(object sender, RibbonControlEventArgs e)
+        {
+            try
+            {
+                var configForm = new Controls.SheetConfigManagerForm();
+                configForm.ShowDialog();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error opening Sheet Configuration Manager: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
     }
 }

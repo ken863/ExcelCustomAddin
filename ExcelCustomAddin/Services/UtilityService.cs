@@ -67,6 +67,107 @@ namespace ExcelCustomAddin
             return columnIndex;
         }
 
+        /// <summary>
+        /// Chuyển đổi chỉ số cột thành tên cột Excel (1=A, 2=B, 27=AA, etc.)
+        /// Đây là hàm đảo ngược của GetColumnIndex
+        ///
+        /// Ví dụ:
+        /// - GetColumnName(1) = "A"
+        /// - GetColumnName(26) = "Z"
+        /// - GetColumnName(27) = "AA"
+        /// - GetColumnName(52) = "AZ"
+        /// - GetColumnName(702) = "ZZ"
+        /// - GetColumnName(703) = "AAA"
+        ///
+        /// </summary>
+        /// <param name="columnIndex">Chỉ số cột (bắt đầu từ 1)</param>
+        /// <returns>Tên cột Excel (A, B, AA, AZ, etc.)</returns>
+        public static string GetColumnName(int columnIndex)
+        {
+            if (columnIndex <= 0)
+                return "A"; // Fallback cho giá trị không hợp lệ
+
+            string columnName = "";
+            int index = columnIndex;
+
+            // Chuyển đổi từ hệ thập phân sang hệ cơ số 26 (A-Z)
+            while (index > 0)
+            {
+                // Lấy chữ cái tương ứng (A-Z)
+                int remainder = (index - 1) % 26;
+                columnName = (char)('A' + remainder) + columnName;
+
+                // Giảm index để xử lý các chữ cái tiếp theo
+                index = (index - 1) / 26;
+            }
+
+            return columnName;
+        }
+
+        /// <summary>
+        /// Lấy dòng cuối cùng có dữ liệu trong worksheet
+        /// Sử dụng UsedRange để tìm vùng dữ liệu được sử dụng
+        ///
+        /// Ví dụ:
+        /// - Nếu UsedRange là A1:C10, trả về 10
+        /// - Nếu UsedRange là A1:C5, trả về 5
+        ///
+        /// </summary>
+        /// <param name="worksheet">Worksheet cần tìm</param>
+        /// <returns>Chỉ số dòng cuối cùng (1-based), hoặc 0 nếu sheet trống</returns>
+        public static int GetLastRow(Worksheet worksheet)
+        {
+            if (worksheet == null)
+                return 0;
+
+            try
+            {
+                var usedRange = worksheet.UsedRange;
+                if (usedRange == null)
+                    return 0;
+
+                int lastRow = usedRange.Row + usedRange.Rows.Count - 1;
+                return lastRow > 0 ? lastRow : 0;
+            }
+            catch (Exception ex)
+            {
+                Logger.Warning($"Lỗi khi lấy dòng cuối cùng: {ex.Message}");
+                return 0;
+            }
+        }
+
+        /// <summary>
+        /// Lấy cột cuối cùng có dữ liệu trong worksheet
+        /// Sử dụng UsedRange để tìm vùng dữ liệu được sử dụng
+        ///
+        /// Ví dụ:
+        /// - Nếu UsedRange là A1:C10, trả về 3 (cột C)
+        /// - Nếu UsedRange là A1:E5, trả về 5 (cột E)
+        ///
+        /// </summary>
+        /// <param name="worksheet">Worksheet cần tìm</param>
+        /// <returns>Chỉ số cột cuối cùng (1-based), hoặc 0 nếu sheet trống</returns>
+        public static int GetLastColumn(Worksheet worksheet)
+        {
+            if (worksheet == null)
+                return 0;
+
+            try
+            {
+                var usedRange = worksheet.UsedRange;
+                if (usedRange == null)
+                    return 0;
+
+                int lastColumn = usedRange.Column + usedRange.Columns.Count - 1;
+                return lastColumn > 0 ? lastColumn : 0;
+            }
+            catch (Exception ex)
+            {
+                Logger.Warning($"Lỗi khi lấy cột cuối cùng: {ex.Message}");
+                return 0;
+            }
+        }
+
         #endregion
 
         #region Sheet Name Generation
@@ -87,7 +188,7 @@ namespace ExcelCustomAddin
         /// <param name="column">Vị trí cột (1-based)</param>
         /// <param name="currentSheetName">Tên sheet hiện tại để lấy cấu hình</param>
         /// <returns>Tên sheet đã tạo hoặc null nếu không thể tạo</returns>
-        public static string GenerateAutoSheetName(Worksheet activeSheet, int column, string currentSheetName)
+        public static string GenerateAutoEvidenceNoText(Worksheet activeSheet, int column, string currentSheetName, int sequenceNo)
         {
             try
             {
@@ -109,7 +210,7 @@ namespace ExcelCustomAddin
 
                 // Tính số thứ tự dựa trên giá trị lớn nhất trong cột (loại bỏ prefix)
                 // Thay vì dùng column index, scan cột để tìm sequence number cao nhất
-                int sequenceNumber = GetNextSequenceNumber(activeSheet, column, prefix);
+                int sequenceNumber = sequenceNo > 0 ? sequenceNo : GetNextSequenceNumber(activeSheet, column, prefix);
 
                 // Format số thứ tự theo cấu hình (VD: "D2" = 2 chữ số, "D3" = 3 chữ số)
                 string numberFormat = sheetConfig.NumberFormat ?? "D2";
@@ -460,7 +561,7 @@ namespace ExcelCustomAddin
         /// <param name="cell">Cell Excel cần tạo named range</param>
         /// <param name="worksheet">Worksheet chứa cell</param>
         /// <returns>Tên named range đã tạo, hoặc null nếu thất bại</returns>
-        public static string GetOrCreateNamedRangeForCell(Range cell, Worksheet worksheet)
+        public static string GetOrCreateNamedRangeForCell(Range cell, Worksheet worksheet, string name = "")
         {
             if (cell == null || worksheet == null)
                 return null;
@@ -473,7 +574,7 @@ namespace ExcelCustomAddin
                 string cellValue = ExtractCellValueForNaming(cell);
 
                 // Bước 2: Sanitize để tạo tên hợp lệ
-                string proposedName = SanitizeForNamedRange(cellValue);
+                string proposedName = string.IsNullOrEmpty(name) ? SanitizeForNamedRange(cellValue) : SanitizeForNamedRange(name);
 
                 // Bước 3: Fallback strategies nếu sanitization thất bại
                 if (string.IsNullOrEmpty(proposedName))
@@ -495,7 +596,7 @@ namespace ExcelCustomAddin
                 {
                     // Bước 5: Tạo named range
                     worksheet.Application.ActiveWorkbook.Names.Add(validName, cell, true);
-                    Logger.Debug($"Đã tạo named range '{validName}' cho cell {cellAddress} với giá trị '{cellValue}'");
+                    Logger.Debug($"Đã tạo named range '{validName}' cho cell {cellAddress} với giá trị '{proposedName}'");
                     return validName;
                 }
             }
@@ -676,6 +777,68 @@ namespace ExcelCustomAddin
         #endregion
 
         #region Active Objects Access
+
+        /// <summary>
+        /// Kiểm tra xem sheet có tồn tại trong workbook không
+        /// So sánh tên sheet không phân biệt chữ hoa/thường
+        ///
+        /// </summary>
+        /// <param name="workbook">Workbook cần kiểm tra</param>
+        /// <param name="sheetName">Tên sheet cần tìm</param>
+        /// <returns>true nếu sheet tồn tại, false nếu không</returns>
+        public static bool SheetExistsInWorkbook(Workbook workbook, string sheetName)
+        {
+            if (workbook == null || string.IsNullOrEmpty(sheetName))
+                return false;
+
+            try
+            {
+                foreach (Worksheet worksheet in workbook.Worksheets)
+                {
+                    if (worksheet.Name.Equals(sheetName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return true;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Warning($"Lỗi khi kiểm tra sheet tồn tại: {ex.Message}");
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Lấy worksheet theo tên từ workbook
+        /// Tìm kiếm không phân biệt chữ hoa/thường
+        ///
+        /// </summary>
+        /// <param name="workbook">Workbook chứa sheets</param>
+        /// <param name="sheetName">Tên sheet cần tìm</param>
+        /// <returns>Worksheet nếu tìm thấy, null nếu không</returns>
+        public static Worksheet GetWorksheetByName(Workbook workbook, string sheetName)
+        {
+            if (workbook == null || string.IsNullOrEmpty(sheetName))
+                return null;
+
+            try
+            {
+                foreach (Worksheet worksheet in workbook.Worksheets)
+                {
+                    if (worksheet.Name.Equals(sheetName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return worksheet;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Warning($"Lỗi khi lấy worksheet theo tên '{sheetName}': {ex.Message}");
+            }
+
+            return null;
+        }
 
         /// <summary>
         /// Thử lấy các active objects (workbook và worksheet) hiện tại

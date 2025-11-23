@@ -280,6 +280,9 @@
     <Compile Include="Controls\ActionPanelControl.Designer.cs">
       <DependentUpon>ActionPanelControl.cs</DependentUpon>
     </Compile>
+    <Compile Include="Controls\SheetConfigManagerForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Services\ApplicationLifecycleService.cs" />
     <Compile Include="Services\EvidenceCreationService.cs" />
     <Compile Include="Services\ImageProcessingService.cs" />
@@ -347,6 +350,8 @@
     <Content Include="Configs\SheetConfig.xml">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+    <Content Include="Resources\duplicate.png" />
+    <None Include="Resources\suitcase.png" />
     <None Include="Resources\pictures.png" />
     <None Include="Resources\pin.png" />
     <None Include="Resources\rename.png" />

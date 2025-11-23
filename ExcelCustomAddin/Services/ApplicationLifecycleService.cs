@@ -370,6 +370,7 @@ namespace ExcelCustomAddin
             actionPanel.FormatDocumentEvent += _addIn.FormatDocument;
             actionPanel.ChangeSheetNameEvent += _addIn.ChangeSheetName;
             actionPanel.InsertMultipleImagesEvent += _addIn.InsertMultipleImages;
+            actionPanel.UpdateEvidenceNoEvent += _addIn.UpdateEvidenceNo;
             actionPanel.PinSheetEvent += _addIn.PinSheet;
             actionPanel.listofSheet.SelectedIndexChanged += _addIn._sheetService.ListOfSheet_SelectionChanged;
         }
